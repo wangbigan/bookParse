@@ -57,6 +57,11 @@ export class ChapterSplitter {
         }
       }
       
+      // 设置正确的章节索引（从0开始递增）
+      chapters.forEach((chapter, index) => {
+        chapter.index = index;
+      });
+      
       return chapters;
     } catch (error) {
       throw new Error(`章节拆分失败: ${error.message}`);

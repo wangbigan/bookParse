@@ -38,7 +38,7 @@ class ApiService {
     
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: 60000, // 60秒超时
+      timeout: 300000, // 5分钟超时，适应AI分析的长时间处理
       headers: {
         'Content-Type': 'application/json'
       }
@@ -64,7 +64,18 @@ class ApiService {
       },
       (error) => {
         console.error('API响应错误:', error);
-        const message = error.response?.data?.message || error.message || '网络错误';
+        
+        // 处理不同类型的错误
+        let message = '网络错误';
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          message = `请求超时，请稍后重试（超时时间：${this.client.defaults.timeout / 1000}秒）`;
+        } else if (error.response?.data?.message) {
+          message = error.response.data.message;
+        } else if (error.message) {
+          message = error.message;
+        }
+        
+        console.error(`API错误详情: ${message}`);
         return Promise.reject(new Error(message));
       }
     );

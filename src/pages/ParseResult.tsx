@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { ChevronRight, ChevronDown, Book, User, Calendar, Building, Hash, Globe, Scissors, Play, Loader2, AlertCircle } from 'lucide-react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronRight, ChevronDown, Book, User, Calendar, Building, Hash, Globe, Scissors, Play, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { apiService } from '../services/api';
 import { BookParseSession, ParseResult as ParseResultType, BookInfo, CoverInfo, TableOfContentsItem, ChapterContent, ChapterStats } from '../types/book';
 
@@ -10,11 +10,13 @@ import { BookParseSession, ParseResult as ParseResultType, BookInfo, CoverInfo, 
 const ParseResult: React.FC = () => {
   const { fileId } = useParams<{ fileId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // 从URL参数或location.state中获取文件ID
   const actualFileId = fileId || (location.state as any)?.recordId;
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [isSplitting, setIsSplitting] = useState(false);
+  const [isSplitCompleted, setIsSplitCompleted] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
   
@@ -91,8 +93,11 @@ const ParseResult: React.FC = () => {
         setParseResult(updatedSession.parseResult);
       }
       
+      // 设置拆分完成状态
+      setIsSplitCompleted(true);
+      
       console.log('🎉 章节拆分完成');
-      alert(`已按照${selectedLevel}级目录完成章节拆分！`);
+      alert(`拆分完成！已按照${selectedLevel}级目录完成章节拆分，现在可以进行章节分析。`);
     } catch (error) {
       console.error('❌ 章节拆分失败:', error);
       console.error('错误详情:', {
@@ -113,6 +118,19 @@ const ParseResult: React.FC = () => {
   }, [actualFileId, selectedLevel, isSplitting, tocStructure, session, parseResult, loading, error, location.state, fileId]);
 
   /**
+   * 跳转到分析报告页面
+   */
+  const handleGoToAnalysis = useCallback(() => {
+    if (!actualFileId) {
+      alert('缺少文件ID，无法跳转到分析页面');
+      return;
+    }
+    
+    // 跳转到分析报告页面，传递文件ID
+    navigate(`/analysis-report?fileId=${actualFileId}`);
+  }, [actualFileId, navigate]);
+
+  /**
    * 加载解析会话数据
    */
   const loadSessionData = async () => {
@@ -131,6 +149,11 @@ const ParseResult: React.FC = () => {
       
       if (sessionData.parseResult) {
         setParseResult(sessionData.parseResult);
+        
+        // 如果已经有章节数据，说明拆分已完成
+        if (sessionData.parseResult.chapters && sessionData.parseResult.chapters.length > 0) {
+          setIsSplitCompleted(true);
+        }
       } else {
         setError('解析结果不存在，请重新解析');
       }
@@ -434,38 +457,67 @@ const ParseResult: React.FC = () => {
 
               {/* 操作按钮 */}
               <div className="flex items-end">
-                <button
-                  onClick={handleSplitChapters}
-                  disabled={isSplitting || !actualFileId || !tocStructure || tocStructure.length === 0}
-                  className="
-                    flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg
-                    hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
-                    transition-colors font-medium w-full justify-center
-                  "
-                >
-                  {isSplitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>拆分中...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-5 w-5" />
-                      <span>开始章节拆分</span>
-                    </>
-                  )}
-                </button>
+                {!isSplitCompleted ? (
+                  <button
+                    onClick={handleSplitChapters}
+                    disabled={isSplitting || !actualFileId || !tocStructure || tocStructure.length === 0}
+                    className="
+                      flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg
+                      hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
+                      transition-colors font-medium w-full justify-center
+                    "
+                  >
+                    {isSplitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>拆分中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-5 w-5" />
+                        <span>开始章节拆分</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleGoToAnalysis}
+                    className="
+                      flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg
+                      hover:bg-green-700 transition-colors font-medium w-full justify-center
+                    "
+                  >
+                    <ArrowRight className="h-5 w-5" />
+                    <span>下一步：章节分析</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* 拆分说明 */}
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-900 mb-2">拆分说明</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• 1级目录：按照主要章节进行拆分，适合快速概览</li>
-                <li>• 2级目录：按照章节小节进行拆分，平衡详细度和可读性</li>
-                <li>• 3级目录：按照最细粒度进行拆分，获得最详细的内容</li>
-              </ul>
+            {/* 拆分说明和状态 */}
+            <div className="mt-4 space-y-4">
+              {/* 状态提示 */}
+              {isSplitCompleted && (
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2">
+                    <div className="text-green-600">✅</div>
+                    <h4 className="font-medium text-green-900">拆分完成</h4>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">
+                    章节拆分已完成，共生成 {chapters.length} 个章节。现在可以进行下一步章节分析。
+                  </p>
+                </div>
+              )}
+              
+              {/* 拆分说明 */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2">拆分说明</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• 1级目录：按照主要章节进行拆分，适合快速概览</li>
+                  <li>• 2级目录：按照章节小节进行拆分，平衡详细度和可读性</li>
+                  <li>• 3级目录：按照最细粒度进行拆分，获得最详细的内容</li>
+                </ul>
+              </div>
             </div>
           </div>
 

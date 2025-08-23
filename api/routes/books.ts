@@ -331,28 +331,72 @@ router.post('/:fileId/analyze', async (req, res) => {
     });
 
     const chapters = session.parseResult.chapters;
+    console.log(`[DEBUG] 总章节数: ${chapters.length}, 请求分析章节索引:`, chapterIndexes);
+    
     const targetChapters = chapterIndexes 
-      ? chapterIndexes.map((index: number) => chapters[index]).filter(Boolean)
+      ? chapterIndexes.map((index: number) => {
+          if (index >= 0 && index < chapters.length) {
+            console.log(`[DEBUG] 选择章节 ${index}: ${chapters[index].title}`);
+            return chapters[index];
+          }
+          console.warn(`[DEBUG] 无效章节索引: ${index}`);
+          return null;
+        }).filter(Boolean)
       : chapters;
+
+    console.log(`[DEBUG] 实际分析章节数: ${targetChapters.length}`);
 
     // 批量分析章节
     const analysisResults = await deepSeekProvider.analyzeChaptersBatch(
       targetChapters,
       analysisType
     );
+    
+    console.log(`[DEBUG] 分析结果数量: ${analysisResults.length}`);
+    
+    // 如果是单章节分析，需要将结果映射回正确的位置并保留现有数据
+    let finalAnalysisResults = analysisResults;
+    if (chapterIndexes && chapterIndexes.length > 0) {
+      // 获取现有的章节分析结果，如果没有则创建新数组
+      const existingAnalysis = session.parseResult?.chapterAnalysis || new Array(chapters.length).fill(null);
+      finalAnalysisResults = [...existingAnalysis]; // 复制现有结果
+      
+      // 将新的分析结果更新到正确的位置
+      chapterIndexes.forEach((originalIndex, resultIndex) => {
+        if (resultIndex < analysisResults.length && originalIndex >= 0 && originalIndex < chapters.length) {
+          finalAnalysisResults[originalIndex] = analysisResults[resultIndex];
+          console.log(`[DEBUG] 更新章节分析结果: 索引 ${originalIndex} <- 结果 ${resultIndex}`);
+        }
+      });
+      
+      console.log(`[DEBUG] 单章节分析 - 保留现有结果并更新指定章节`);
+    }
 
-    // 生成书籍总结
-    const bookSummary = await deepSeekProvider.generateBookSummary(
-      session.parseResult.bookInfo,
-      analysisResults
-    );
+    // 只有在批量分析（分析所有章节或大部分章节）时才生成书籍总结
+    let bookSummary = null;
+    const totalChapters = chapters.length;
+    const analyzedChapters = chapterIndexes ? chapterIndexes.length : totalChapters;
+    
+    // 如果分析的章节数量超过总章节数的一半，或者没有指定章节索引（分析所有章节），则生成书籍总结
+    if (!chapterIndexes || analyzedChapters >= Math.ceil(totalChapters / 2)) {
+      console.log(`[DEBUG] 生成书籍总结 - 分析章节数: ${analyzedChapters}, 总章节数: ${totalChapters}`);
+      bookSummary = await deepSeekProvider.generateBookSummary(
+        session.parseResult.bookInfo,
+        analysisResults
+      );
+    } else {
+      console.log(`[DEBUG] 跳过书籍总结生成 - 单章节分析，章节索引: ${chapterIndexes}`);
+    }
 
     // 更新解析结果
     const updatedParseResult = {
       ...session.parseResult,
-      chapterAnalysis: analysisResults,
+      chapterAnalysis: finalAnalysisResults,
       bookSummary
     };
+    
+    console.log(`[DEBUG] 准备保存分析结果到会话 - 章节数量: ${finalAnalysisResults.length}`);
+    console.log(`[DEBUG] 已分析章节索引:`, finalAnalysisResults.map((result, index) => result ? index : null).filter(i => i !== null));
 
     // 更新会话
     await fileManager.updateSession(fileId, {
@@ -360,6 +404,8 @@ router.post('/:fileId/analyze', async (req, res) => {
       progress: 100,
       parseResult: updatedParseResult
     });
+    
+    console.log(`[DEBUG] 分析结果已保存到会话数据`);
 
     // 添加成功日志
     await fileManager.addLog(fileId, {
@@ -372,15 +418,18 @@ router.post('/:fileId/analyze', async (req, res) => {
       details: {
         analyzedChapters: analysisResults.length,
         totalArguments: analysisResults.reduce((sum, result) => sum + result.arguments.length, 0),
-        totalQuotes: analysisResults.reduce((sum, result) => sum + result.quotes.length, 0)
+        totalQuotes: analysisResults.reduce((sum, result) => sum + result.quotes.length, 0),
+        requestedIndexes: chapterIndexes || 'all'
       }
     });
+
+    console.log(`[DEBUG] 返回分析结果数量: ${finalAnalysisResults.length}`);
 
     res.json({
       success: true,
       data: {
         session: fileManager.getSession(fileId),
-        analysisResults,
+        analysisResults: finalAnalysisResults,
         bookSummary
       },
       message: 'AI分析完成'

@@ -27,7 +27,7 @@ export interface TocItem {
   parent_id: string | null;
 }
 
-// 章节分析结果
+// 章节分析结果（新格式，符合JSON模板）
 export interface Chapter {
   chapter_title: string;
   chapter_viewpoint: string;
@@ -35,7 +35,7 @@ export interface Chapter {
   arguments: Argument[];
 }
 
-// 论据信息
+// 论据信息（新格式，符合JSON模板）
 export interface Argument {
   statement: string;
   positive_case: string[];
@@ -43,11 +43,28 @@ export interface Argument {
   citations: Citation[];
 }
 
-// 引用信息
+// 引用信息（新格式，符合JSON模板）
 export interface Citation {
   cited_source: string;
   cited_type: '书籍' | '文章' | '故事' | '权威观点';
   viewpoint: string;
+}
+
+// 章节分析原始响应接口（用于AI返回的原始数据）
+export interface ChapterAnalysisRawResponse {
+  chapter_title: string;
+  chapter_viewpoint: string;
+  chapter_keywords: string[];
+  arguments: {
+    statement: string;
+    positive_case: string[];
+    negative_case: string[];
+    citations: {
+      cited_source: string;
+      cited_type: string;
+      viewpoint: string;
+    }[];
+  }[];
 }
 
 // 书籍总结

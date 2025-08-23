@@ -23,7 +23,7 @@ export class DeepSeekProvider {
       model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
       maxTokens: parseInt(process.env.MAX_TOKENS || '4000'),
       temperature: parseFloat(process.env.TEMPERATURE || '0.7'),
-      maxRetries: parseInt(process.env.MAX_RETRIES || '3'),
+      maxRetries: parseInt(process.env.MAX_RETRIES || '1'),
       retryDelay: parseInt(process.env.RETRY_DELAY || '1000'),
       ...config
     };
@@ -38,7 +38,7 @@ export class DeepSeekProvider {
         'Authorization': `Bearer ${this.config.apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 60000 // 60秒超时
+      timeout: 180000 // 3分钟超时
     });
   }
 
@@ -152,35 +152,43 @@ export class DeepSeekProvider {
     analysisType: 'basic' | 'detailed' | 'full'
   ): string {
     const basePrompt = `
-请分析以下章节内容，并按照JSON格式返回分析结果：
+请分析以下章节内容，并严格按照指定的JSON格式返回分析结果：
 
 章节标题：${chapter.title}
 章节内容：
-${chapter.content.substring(0, 3000)}${chapter.content.length > 3000 ? '...' : ''}
+${chapter.content}
 
-请提取以下信息并以JSON格式返回：
+请提取以下信息并严格按照以下JSON格式返回（必须是有效的JSON格式，不要添加任何其他文字）：
 {
-  "summary": "章节摘要（200字以内）",
-  "keyPoints": ["关键要点1", "关键要点2", "关键要点3"],
-  "arguments": [
+  "chapter_title": <本章标题>,
+  "chapter_viewpoint": <本章内容总结，核心观点概述>,
+  "chapter_keywords": <本章核心关键词列表,作者在本章中提出或者引用的重要概念或者关键词，list类型>
+  "arguments": <针对本章内容和核心观点，作者提出的主要论据信息，可能有多个>
+  [
     {
-      "point": "论点描述",
-      "evidence": "支撑证据",
-      "strength": "strong|medium|weak"
+      "statement": <论据概述，string类型>,
+      "positive_case": <支撑该论据的正面案例，list类型，可能是一个或者多个，也可能没有>,
+      "negative_case": <支撑该论据的反面案例，list类型，可能是一个或者多个，也可能没有>,
+      "citations": <围绕该论据，作者提到的重要的外部引用，可以是书籍、文章，也可以是权威人士的观点。如果没有可以为空>
+      [
+        {
+          "cited_source": <引用来源：书籍名、文章名或者权威人士姓名>,
+          "cited_type": <引用类型：书籍/文章/故事/权威观点>,
+          "viewpoint": <简要概述所引用的书籍、文章、故事的内容，并总结其所要传达的观点>
+        }
+      ]
     }
-  ],
-  "quotes": [
-    {
-      "text": "引用文本",
-      "context": "引用上下文",
-      "significance": "重要性说明"
-    }
-  ],
-  "themes": ["主题1", "主题2"],
-  "emotions": ["情感1", "情感2"],
-  "characters": ["人物1", "人物2"],
-  "locations": ["地点1", "地点2"]
+  ]
 }
+
+注意事项：
+1. 必须返回有效的JSON格式
+2. chapter_keywords应包含作者在本章中提出或引用的重要概念
+3. arguments包含作者针对本章核心观点提出的主要论据
+4. positive_case和negative_case可以为空数组，但必须存在
+5. citations如果没有外部引用可以为空数组
+6. 所有字符串值都要用双引号包围
+7. 不要在JSON中使用注释或其他非标准格式
 `;
 
     if (analysisType === 'basic') {
@@ -236,11 +244,29 @@ ${analysisOverview}
    * 发送API请求
    */
   private async makeRequest(prompt: string): Promise<string> {
+    // 生成请求ID用于追踪
+    const requestId = this.generateRequestId();
+    const startTime = Date.now();
     let lastError: Error;
     
+    // 记录请求开始日志
+    console.log(`\n🚀 [${requestId}] DeepSeek API 请求开始`);
+    console.log(`📝 [${requestId}] 请求参数:`, {
+      model: this.config.model,
+      max_tokens: this.config.maxTokens,
+      temperature: this.config.temperature,
+      prompt_length: prompt.length,
+      timestamp: new Date().toISOString()
+    });
+    console.log(`📄 [${requestId}] 输入内容 (前500字符):`, prompt.substring(0, 500) + (prompt.length > 500 ? '...' : ''));
+    
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
+      const attemptStartTime = Date.now();
+      
       try {
-        const response = await this.client.post('/chat/completions', {
+        console.log(`🔄 [${requestId}] 第 ${attempt} 次尝试开始`);
+        
+        const requestPayload = {
           model: this.config.model,
           messages: [{
             role: 'user',
@@ -248,25 +274,74 @@ ${analysisOverview}
           }],
           max_tokens: this.config.maxTokens,
           temperature: this.config.temperature
+        };
+        
+        const response = await this.client.post('/chat/completions', requestPayload);
+        const attemptDuration = Date.now() - attemptStartTime;
+        
+        // 记录响应信息
+        console.log(`📊 [${requestId}] API响应状态:`, {
+          status: response.status,
+          statusText: response.statusText,
+          attempt: attempt,
+          duration_ms: attemptDuration
         });
-
+        
         const content = response.data.choices[0]?.message?.content;
         if (!content) {
           throw new Error('API返回内容为空');
         }
-
+        
+        const totalDuration = Date.now() - startTime;
+        
+        // 记录成功响应日志
+        console.log(`✅ [${requestId}] API请求成功完成`);
+        console.log(`📈 [${requestId}] 响应统计:`, {
+          response_length: content.length,
+          total_duration_ms: totalDuration,
+          attempts_used: attempt,
+          tokens_used: response.data.usage?.total_tokens || 'unknown',
+          prompt_tokens: response.data.usage?.prompt_tokens || 'unknown',
+          completion_tokens: response.data.usage?.completion_tokens || 'unknown'
+        });
+        console.log(`📄 [${requestId}] 响应内容 :`, content.substring);
+        
         return content;
       } catch (error) {
         lastError = error;
-        console.error(`API请求失败 (尝试 ${attempt}/${this.config.maxRetries}):`, error.message);
+        const attemptDuration = Date.now() - attemptStartTime;
         
-        if (attempt < this.config.maxRetries) {
-          await this.delay(this.config.retryDelay * attempt);
+        // 记录错误日志
+        console.error(`❌ [${requestId}] API请求失败 (尝试 ${attempt}/${this.config.maxRetries}):`);
+        console.error(`🔍 [${requestId}] 错误详情:`, {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          attempt: attempt,
+          duration_ms: attemptDuration,
+          error_type: error.constructor.name
+        });
+        
+        if (error.response?.data) {
+          console.error(`📋 [${requestId}] API错误响应:`, error.response.data);
         }
+        
+        // 不进行重试，直接跳出循环
+        break;
       }
     }
     
+    const totalDuration = Date.now() - startTime;
+    console.error(`💥 [${requestId}] 所有重试尝试均失败，总耗时: ${totalDuration}ms`);
+    
     throw lastError;
+  }
+
+  /**
+   * 生成请求ID
+   */
+  private generateRequestId(): string {
+    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
@@ -280,28 +355,126 @@ ${analysisOverview}
       // 提取JSON内容
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
+        console.error('响应中未找到有效的JSON格式，原始响应:', response);
         throw new Error('响应中未找到有效的JSON格式');
       }
       
-      const parsed = JSON.parse(jsonMatch[0]);
+      let jsonString = jsonMatch[0];
+      console.log('提取的JSON字符串:', jsonString);
       
+      // JSON字符串清理和修复
+      jsonString = this.cleanJsonString(jsonString);
+      
+      let parsed;
+      try {
+        // 尝试标准JSON解析
+        parsed = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('标准JSON解析失败，尝试备用解析策略:', parseError.message);
+        console.error('问题JSON字符串:', jsonString);
+        
+        // 备用解析策略
+        parsed = this.fallbackJsonParse(jsonString);
+      }
+      
+      // 解析新的JSON结构
       return {
         chapterIndex: chapter.index,
-        chapterTitle: chapter.title,
-        summary: parsed.summary || '无摘要',
-        keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-        arguments: this.parseArguments(parsed.arguments),
-        quotes: this.parseQuotes(parsed.quotes),
-        themes: Array.isArray(parsed.themes) ? parsed.themes : [],
-        emotions: Array.isArray(parsed.emotions) ? parsed.emotions : [],
-        characters: Array.isArray(parsed.characters) ? parsed.characters : [],
-        locations: Array.isArray(parsed.locations) ? parsed.locations : [],
+        chapterTitle: parsed.chapter_title || chapter.title,
+        summary: parsed.chapter_viewpoint || '无章节观点总结',
+        keyPoints: Array.isArray(parsed.chapter_keywords) ? parsed.chapter_keywords : [],
+        arguments: this.parseNewArguments(parsed.arguments),
+        quotes: [], // 新格式中引用信息在arguments的citations中
+        themes: [], // 保持兼容性，但新格式中不直接包含
+        emotions: [], // 保持兼容性，但新格式中不直接包含
+        characters: [], // 保持兼容性，但新格式中不直接包含
+        locations: [], // 保持兼容性，但新格式中不直接包含
         wordCount: chapter.wordCount,
         analysisDate: new Date()
       };
     } catch (error) {
       console.error('解析章节分析响应失败:', error);
-      return this.createErrorAnalysisResult(chapter, '解析响应失败');
+      console.error('章节信息:', { index: chapter.index, title: chapter.title });
+      console.error('原始响应:', response);
+      return this.createErrorAnalysisResult(chapter, `解析响应失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 清理JSON字符串，修复常见的格式问题
+   */
+  private cleanJsonString(jsonString: string): string {
+    // 移除可能的BOM标记
+    if (jsonString.charCodeAt(0) === 0xFEFF) {
+      jsonString = jsonString.slice(1);
+    }
+    
+    // 移除可能的前后空白字符
+    jsonString = jsonString.trim();
+    
+    // 确保字符串以{开头，以}结尾
+    if (!jsonString.startsWith('{')) {
+      const startIndex = jsonString.indexOf('{');
+      if (startIndex > 0) {
+        jsonString = jsonString.substring(startIndex);
+      }
+    }
+    
+    if (!jsonString.endsWith('}')) {
+      const endIndex = jsonString.lastIndexOf('}');
+      if (endIndex > 0) {
+        jsonString = jsonString.substring(0, endIndex + 1);
+      }
+    }
+    
+    // 修复常见的JSON格式问题
+    jsonString = jsonString
+      // 修复尾随逗号
+      .replace(/,\s*([}\]])/g, '$1')
+      // 修复多余的逗号
+      .replace(/,,+/g, ',')
+      // 处理换行符 - 不要转义，而是直接移除或替换为空格
+      .replace(/\\n/g, ' ')
+      .replace(/\\r/g, ' ')
+      .replace(/\\t/g, ' ')
+      // 清理多余的空格
+      .replace(/\s+/g, ' ');
+    
+    console.log('清理后的JSON字符串:', jsonString.substring(0, 200) + '...');
+    return jsonString;
+  }
+
+  /**
+   * 备用JSON解析策略
+   */
+  private fallbackJsonParse(jsonString: string): any {
+    try {
+      // 尝试使用eval（仅在受控环境下）
+      // 注意：这是最后的备用方案，存在安全风险
+      const sanitized = jsonString
+        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":')
+        .replace(/:\s*([^"\[\{][^,}\]]*)/g, (match, value) => {
+          const trimmed = value.trim();
+          if (trimmed === 'true' || trimmed === 'false' || trimmed === 'null' || /^\d+(\.\d+)?$/.test(trimmed)) {
+            return ': ' + trimmed;
+          }
+          return ': "' + trimmed.replace(/"/g, '\\"') + '"';
+        });
+      
+      return JSON.parse(sanitized);
+    } catch (error) {
+      console.error('备用解析策略也失败了:', error.message);
+      // 返回基本的默认结构
+      return {
+        summary: '解析失败，无法获取摘要',
+        keyPoints: [],
+        arguments: [],
+        quotes: [],
+        themes: [],
+        emotions: [],
+        characters: [],
+        locations: []
+      };
     }
   }
 
@@ -354,7 +527,41 @@ ${analysisOverview}
   }
 
   /**
-   * 解析论据信息
+   * 解析新格式的论据信息
+   */
+  private parseNewArguments(argumentsData: any[]): ArgumentInfo[] {
+    if (!Array.isArray(argumentsData)) return [];
+    
+    return argumentsData.map(arg => {
+      // 将新格式转换为旧格式以保持兼容性
+      const positiveCases = Array.isArray(arg.positive_case) ? arg.positive_case.join('; ') : '';
+      const negativeCases = Array.isArray(arg.negative_case) ? arg.negative_case.join('; ') : '';
+      const citations = Array.isArray(arg.citations) ? 
+        arg.citations.map(citation => 
+          `${citation.cited_source || ''}(${citation.cited_type || ''}): ${citation.viewpoint || ''}`
+        ).join('; ') : '';
+      
+      let evidence = '';
+      if (positiveCases) evidence += `正面案例: ${positiveCases}`;
+      if (negativeCases) {
+        if (evidence) evidence += '; ';
+        evidence += `反面案例: ${negativeCases}`;
+      }
+      if (citations) {
+        if (evidence) evidence += '; ';
+        evidence += `引用: ${citations}`;
+      }
+      
+      return {
+        point: arg.statement || '无论据',
+        evidence: evidence || '无证据',
+        strength: 'medium' as const // 新格式中没有strength字段，默认为medium
+      };
+    });
+  }
+
+  /**
+   * 解析论据信息（保留旧方法以兼容）
    */
   private parseArguments(argumentsData: any[]): ArgumentInfo[] {
     if (!Array.isArray(argumentsData)) return [];
