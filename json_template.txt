@@ -1,0 +1,47 @@
+{
+  "book_info": {
+    "title": <书籍标题>,
+    "author": <作者姓名>,
+    "translator": <译者>,
+    "publisher": <出版社名称>,
+    "isbn": <ISBN号码>,
+    "publication_date": <出版日期>,
+    "language": <语言>
+  },
+  "cover_info": {
+    "cover_image": <封面图片，base64编码>,
+    "cover_alt_text": <封面图片替代文本>
+  },
+  "book_summary": {
+    "book_intro": <书籍简介，string类型>,
+    "author_intro": <作者简介，string类型>,
+    "core_problem": <这本书作者想要解决的核心问题，string类型>,
+    "core_keywords": <关键词列表，作者在书中提出的或者引用的核心概念或者关键词；list类型>
+  },
+  "table_of_contents": <书籍完整目录结构，扁平化结构，通过父子关系关联>
+  [{
+    "id": <目录项唯一标识，string类型>,
+    "title": <目录项标题，string类型>,
+    "level": <目录层级，number类型，1表示一级目录，2表示二级目录，以此类推>,
+    "href": <目录项链接，string类型，指向EPUB文件中的具体位置>,
+    "parent_id": <父目录项ID，string类型，根目录项为null>
+  }],
+  "chapters": <按照书籍目录划分的各个章节（一级目录）内容的总结>
+  [{
+	  "chapter_title": <本章标题>,
+	  "chapter_viewpoint": <本章内容总结，核心观点概述>,
+    "chapter_keywords": <本章核心关键词列表,作者在本章中提出或者引用的重要概念或者关键词，list类型>
+	  "arguments": <针对本章内容和核心观点，作者提出的主要论据信息，可能有多个>
+		[{
+			  "statement": <论据概述，string类型>,
+			  "positive_case": <支撑该论据的正面案例，list类型，可能是一个或者多个，也可能没有>,
+			  "negative_case": <支撑该论据的反面案例，list类型，可能是一个或者多个，也可能没有>,
+			  "citations": <围绕该论据，作者提到的重要的外部引用，可以是书籍、文章，也可以是权威人士的观点。如果没有可以为空>
+			  [{
+				"cited_source": <引用来源，书籍名、文章名或者权威人士姓名>,
+				"cited_type": <引用类型：书籍/文章/故事/权威观点>,
+				"viewpoint": <简要概述所引用的书籍、文章、故事的内容，并总结其所要传达的观点>
+			  }]
+	  	}]
+	}]
+}

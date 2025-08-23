@@ -1,0 +1,160 @@
+{
+  "id": "bd85d4f9-b59e-4262-9afb-bcded660f44b",
+  "filename": "è®¤ç¥è§éï¼å¼å¯èªææ¹åçåå¨å (å¨å²­) (Z-Library).epub",
+  "filepath": "/Users/wbg/project/bookParse/uploads/bd85d4f9-b59e-4262-9afb-bcded660f44b.epub",
+  "status": "parsed",
+  "createdAt": "2025-08-22T12:58:09.683Z",
+  "updatedAt": "2025-08-22T12:58:09.851Z",
+  "progress": 50,
+  "parseResult": {
+    "bookInfo": {
+      "title": "认知觉醒：开启自我改变的原动力（当你认知觉醒，何惧焦虑迷茫！畅销书《反本能》作者卫蓝激赏力荐！）",
+      "author": "周岭",
+      "translator": "",
+      "publisher": "人民邮电出版社",
+      "isbn": "ca9ce2d1-15e3-4aeb-af92-a952c28a3f4e",
+      "publication_date": "2020-08-31T16:00:00+00:00",
+      "language": "zh"
+    },
+    "tableOfContents": [
+      {
+        "id": "129e0265-48cd-4586-b8a3-0e8d8a4d2df1",
+        "title": "第1章",
+        "level": 1,
+        "href": "titlepage.xhtml",
+        "parent_id": null
+      },
+      {
+        "id": "52b42fe3-d519-4e66-9f3e-a28441e9f471",
+        "title": "第2章",
+        "level": 1,
+        "href": "text/part0001.html",
+        "parent_id": null
+      },
+      {
+        "id": "a0b185ec-f717-4cc3-b92d-49bd0058a581",
+        "title": "第3章",
+        "level": 1,
+        "href": "text/part0000.html",
+        "parent_id": null
+      },
+      {
+        "id": "66545515-99b0-451f-9a16-ed0cea853b9f",
+        "title": "第4章",
+        "level": 1,
+        "href": "text/part0002.html",
+        "parent_id": null
+      },
+      {
+        "id": "66d9600d-b511-4042-ae87-c9c3cd8a9c48",
+        "title": "第5章",
+        "level": 1,
+        "href": "text/33%20-%20副本%20-%20副本.html",
+        "parent_id": null
+      },
+      {
+        "id": "b71f3248-e355-44de-a965-b15fc82d1bfa",
+        "title": "第6章",
+        "level": 1,
+        "href": "text/part0003.html",
+        "parent_id": null
+      },
+      {
+        "id": "2a021ab8-bd34-4b0a-bdf9-7b2ce4954d99",
+        "title": "第7章",
+        "level": 1,
+        "href": "text/part0004.html",
+        "parent_id": null
+      },
+      {
+        "id": "19b5eef3-73ad-4851-98f0-22bce62f0eb2",
+        "title": "第8章",
+        "level": 1,
+        "href": "text/part0005.html",
+        "parent_id": null
+      },
+      {
+        "id": "5d8a9f5d-30f5-4750-acb5-b65622dc7d7b",
+        "title": "第9章",
+        "level": 1,
+        "href": "text/part0006.html",
+        "parent_id": null
+      },
+      {
+        "id": "fcc14dcc-c8c7-473c-865c-e030f3f6e7a0",
+        "title": "第10章",
+        "level": 1,
+        "href": "text/part0007.html",
+        "parent_id": null
+      },
+      {
+        "id": "13f87c30-d4ee-4b0b-8ca4-4c842492dc95",
+        "title": "第11章",
+        "level": 1,
+        "href": "text/part0008.html",
+        "parent_id": null
+      },
+      {
+        "id": "175c7e12-6333-44d6-b1b1-fdd7fe2aadde",
+        "title": "第12章",
+        "level": 1,
+        "href": "text/part0009.html",
+        "parent_id": null
+      },
+      {
+        "id": "8905b449-639e-4a11-80ab-22ac785fb6b0",
+        "title": "第13章",
+        "level": 1,
+        "href": "text/part0010.html",
+        "parent_id": null
+      },
+      {
+        "id": "d7e042c3-fcf4-438d-a54d-8f5f6e89a034",
+        "title": "第14章",
+        "level": 1,
+        "href": "text/part0011.html",
+        "parent_id": null
+      },
+      {
+        "id": "20a0ea3e-27a4-4ee5-a836-844a624ddca8",
+        "title": "第15章",
+        "level": 1,
+        "href": "text/part0012.html",
+        "parent_id": null
+      },
+      {
+        "id": "3949a4bb-ad21-4f52-bc39-f65e3a9cd438",
+        "title": "第16章",
+        "level": 1,
+        "href": "text/part0013.html",
+        "parent_id": null
+      },
+      {
+        "id": "0212c1b7-f2fb-4b53-bbdb-bd68e73887d8",
+        "title": "第17章",
+        "level": 1,
+        "href": "text/part0014.html",
+        "parent_id": null
+      },
+      {
+        "id": "472da7b9-5b57-4310-aa38-929b907e4bf2",
+        "title": "第18章",
+        "level": 1,
+        "href": "text/part0015.html",
+        "parent_id": null
+      },
+      {
+        "id": "e64e47a9-0166-4c26-ae98-f6213642c094",
+        "title": "第19章",
+        "level": 1,
+        "href": "text/33%20-%20副本.html",
+        "parent_id": null
+      }
+    ],
+    "success": true,
+    "coverInfo": {
+      "cover_image": "",
+      "cover_alt_text": "封面图片文件不存在"
+    }
+  }
+}

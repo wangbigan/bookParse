@@ -1,0 +1,351 @@
+{
+  "id": "114ef7ba-121f-4fbb-b08e-19a23bef1377",
+  "filename": "è®¤ç¥è§éï¼å¼å¯èªææ¹åçåå¨å (å¨å²­) (Z-Library).epub",
+  "filepath": "/Users/wbg/project/bookParse/uploads/114ef7ba-121f-4fbb-b08e-19a23bef1377.epub",
+  "status": "split",
+  "createdAt": "2025-08-22T14:50:13.047Z",
+  "updatedAt": "2025-08-22T14:50:18.604Z",
+  "progress": 70,
+  "parseResult": {
+    "bookInfo": {
+      "title": "认知觉醒：开启自我改变的原动力（当你认知觉醒，何惧焦虑迷茫！畅销书《反本能》作者卫蓝激赏力荐！）",
+      "author": "周岭",
+      "translator": "",
+      "publisher": "人民邮电出版社",
+      "isbn": "ca9ce2d1-15e3-4aeb-af92-a952c28a3f4e",
+      "publication_date": "2020-08-31T16:00:00+00:00",
+      "language": "zh"
+    },
+    "tableOfContents": [
+      {
+        "id": "42aaa894-8dd4-4b8e-bbcc-656a5561570b",
+        "title": "扉页",
+        "level": 1,
+        "href": "text/part0000.html",
+        "parent_id": null
+      },
+      {
+        "id": "2c6f9171-1d63-4271-bb9d-2b881b1a14f8",
+        "title": "版权信息",
+        "level": 1,
+        "href": "text/part0001.html",
+        "parent_id": null
+      },
+      {
+        "id": "78e885b7-7911-49c8-a82a-4179eba4a4e3",
+        "title": "目录",
+        "level": 1,
+        "href": "text/part0002.html",
+        "parent_id": null
+      },
+      {
+        "id": "1de641bd-10d7-4e68-a9a9-958a20a323ad",
+        "title": "自序 开启自我改变的原动力",
+        "level": 1,
+        "href": "text/part0004.html",
+        "parent_id": null
+      },
+      {
+        "id": "97663b5b-770a-46d7-b82f-6eccb709eb83",
+        "title": "上篇 内观自己，摆脱焦虑",
+        "level": 1,
+        "href": "text/part0005.html",
+        "parent_id": null
+      },
+      {
+        "id": "c117aca2-c9d6-4d17-8e6a-e2176626789c",
+        "title": "第一章 大脑——一切问题的起源",
+        "level": 2,
+        "href": "text/part0005.html#sigil_toc_id_3",
+        "parent_id": "97663b5b-770a-46d7-b82f-6eccb709eb83"
+      },
+      {
+        "id": "7d32e220-5242-4596-b8ab-c7f3136c8209",
+        "title": "第一节 大脑：重新认识你自己",
+        "level": 3,
+        "href": "text/part0005.html#sigil_toc_id_4",
+        "parent_id": "c117aca2-c9d6-4d17-8e6a-e2176626789c"
+      },
+      {
+        "id": "f87fb75c-33f6-46f6-87ac-62140cff7db8",
+        "title": "第二节 焦虑：焦虑的根源",
+        "level": 3,
+        "href": "text/part0005.html#sigil_toc_id_5",
+        "parent_id": "c117aca2-c9d6-4d17-8e6a-e2176626789c"
+      },
+      {
+        "id": "b89e71af-4ba2-4215-b6f3-b9eb4977ade2",
+        "title": "第三节 耐心：得耐心者得天下",
+        "level": 3,
+        "href": "text/part0005.html#sigil_toc_id_6",
+        "parent_id": "c117aca2-c9d6-4d17-8e6a-e2176626789c"
+      },
+      {
+        "id": "30a55945-8460-4190-9b50-030df464cb08",
+        "title": "第二章 潜意识——生命留给我们的彩蛋",
+        "level": 2,
+        "href": "text/part0006.html",
+        "parent_id": "97663b5b-770a-46d7-b82f-6eccb709eb83"
+      },
+      {
+        "id": "bab730fc-6972-43ef-8508-82de14e141e2",
+        "title": "第一节 模糊：人生是一场消除模糊的比赛",
+        "level": 3,
+        "href": "text/part0006.html#sigil_toc_id_8",
+        "parent_id": "30a55945-8460-4190-9b50-030df464cb08"
+      },
+      {
+        "id": "4e4d7eff-0c31-4879-8c18-476d369b0adc",
+        "title": "第二节 感性：顶级的成长竟然是“凭感觉”",
+        "level": 3,
+        "href": "text/part0006.html#sigil_toc_id_9",
+        "parent_id": "30a55945-8460-4190-9b50-030df464cb08"
+      },
+      {
+        "id": "63106eaf-3ea7-4ca1-b016-bf2abf81bd2f",
+        "title": "第三章 元认知——人类的终极能能力",
+        "level": 2,
+        "href": "text/part0007.html",
+        "parent_id": "97663b5b-770a-46d7-b82f-6eccb709eb83"
+      },
+      {
+        "id": "14edb05a-4ae2-49bd-ba1d-f477844d76f0",
+        "title": "第一节 元认知：成长慢，是因为你不会“飞”",
+        "level": 3,
+        "href": "text/part0007.html#sigil_toc_id_11",
+        "parent_id": "63106eaf-3ea7-4ca1-b016-bf2abf81bd2f"
+      },
+      {
+        "id": "76658814-f511-4f6d-8b6a-686349d92789",
+        "title": "第二节 自控力：我们生而为人就是为了成为思维舵手",
+        "level": 3,
+        "href": "text/part0007.html#sigil_toc_id_12",
+        "parent_id": "63106eaf-3ea7-4ca1-b016-bf2abf81bd2f"
+      },
+      {
+        "id": "b8941393-3e80-481e-aeb2-c283affbfbff",
+        "title": "下篇 外观世界，借力前行",
+        "level": 1,
+        "href": "text/part0008.html",
+        "parent_id": null
+      },
+      {
+        "id": "0d6bd790-e02d-4e30-83fd-1c5f009c20d2",
+        "title": "第四章 专注力——情绪和智慧的交叉地带",
+        "level": 2,
+        "href": "text/part0008.html#sigil_toc_id_14",
+        "parent_id": "b8941393-3e80-481e-aeb2-c283affbfbff"
+      },
+      {
+        "id": "377bfad7-4f00-4026-b2be-a72823e6546a",
+        "title": "第一节 情绪专注：一招提振你的注意力",
+        "level": 3,
+        "href": "text/part0008.html#sigil_toc_id_15",
+        "parent_id": "0d6bd790-e02d-4e30-83fd-1c5f009c20d2"
+      },
+      {
+        "id": "bd7ccd73-5a86-4abe-bcff-46d6bbaf3ed0",
+        "title": "第二节 学习专注：深度沉浸是进化双刃剑的安全剑柄",
+        "level": 3,
+        "href": "text/part0008.html#sigil_toc_id_16",
+        "parent_id": "0d6bd790-e02d-4e30-83fd-1c5f009c20d2"
+      },
+      {
+        "id": "94103f9d-4ca7-4605-bb27-58d782c28431",
+        "title": "第五章 学习力——学习不是一味地努力",
+        "level": 2,
+        "href": "text/part0009.html",
+        "parent_id": "b8941393-3e80-481e-aeb2-c283affbfbff"
+      },
+      {
+        "id": "88ad0d3c-719f-49fa-9fb0-581676da0c11",
+        "title": "第一节 匹配：舒适区边缘，适用于万物的方法论",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_18",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "050ab545-7e4f-4450-8ce7-3ae9fd4bd0dc",
+        "title": "第二节 深度：深度学习，人生为数不多的好出路",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_19",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "b5fb96fb-0d1e-4438-b064-7528ff8d1a70",
+        "title": "第三节 关联：高手的“暗箱”",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_20",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "91cf7835-445e-4c20-8af6-22c3b88177ff",
+        "title": "第四节 体系：建立个人认知体系其实很简单",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_21",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "088683bc-3075-4c65-aa8a-183e6e3f3b78",
+        "title": "第五节 打卡：莫迷恋打卡，打卡打不出未来",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_22",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "c7c26d4b-9970-4dff-bc5d-9d1d83428d9f",
+        "title": "第六节 反馈：是时候告诉你什么是真正的学习了",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_23",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "cd8756c9-2925-4f2c-95aa-1e46a9416a66",
+        "title": "第七节 休息：你没成功，可能是因为太刻苦了",
+        "level": 3,
+        "href": "text/part0009.html#sigil_toc_id_24",
+        "parent_id": "94103f9d-4ca7-4605-bb27-58d782c28431"
+      },
+      {
+        "id": "c6a30f8f-121d-4b85-8b86-09c318d240df",
+        "title": "第六章 行动力——没有行动世界只是个概念",
+        "level": 2,
+        "href": "text/part0010.html",
+        "parent_id": "b8941393-3e80-481e-aeb2-c283affbfbff"
+      },
+      {
+        "id": "212353e5-f85f-4503-9a3e-507546c875b1",
+        "title": "第一节 清晰：一个观念，重构你的行动力",
+        "level": 3,
+        "href": "text/part0010.html#sigil_toc_id_26",
+        "parent_id": "c6a30f8f-121d-4b85-8b86-09c318d240df"
+      },
+      {
+        "id": "4766e7b9-40b3-4a93-ac2e-38b21636b5e6",
+        "title": "第二节 “傻瓜”：这个世界会奖励那些不计得失的“傻瓜”",
+        "level": 3,
+        "href": "text/part0010.html#sigil_toc_id_27",
+        "parent_id": "c6a30f8f-121d-4b85-8b86-09c318d240df"
+      },
+      {
+        "id": "05effd4c-ae75-4107-858c-68e92e316229",
+        "title": "第三节 行动：“道理都懂，就是不做”怎么破解",
+        "level": 3,
+        "href": "text/part0010.html#sigil_toc_id_28",
+        "parent_id": "c6a30f8f-121d-4b85-8b86-09c318d240df"
+      },
+      {
+        "id": "1965108d-47fe-41c1-aa7b-d52520f38d2e",
+        "title": "第七章 情绪力——情绪是多角度看问题的智慧",
+        "level": 2,
+        "href": "text/part0011.html",
+        "parent_id": "b8941393-3e80-481e-aeb2-c283affbfbff"
+      },
+      {
+        "id": "a6c5b465-1633-45fb-a0c3-a036c0f3f0eb",
+        "title": "第一节 心智带宽：唯有富足，方能解忧",
+        "level": 3,
+        "href": "text/part0011.html#sigil_toc_id_30",
+        "parent_id": "1965108d-47fe-41c1-aa7b-d52520f38d2e"
+      },
+      {
+        "id": "a1c0bd77-f5ff-4010-86d8-b3e2f6702a7c",
+        "title": "第二节 单一视角：你的坏情绪，源于视角单一",
+        "level": 3,
+        "href": "text/part0011.html#sigil_toc_id_31",
+        "parent_id": "1965108d-47fe-41c1-aa7b-d52520f38d2e"
+      },
+      {
+        "id": "c9cb0945-3174-4f7e-b085-15057901353d",
+        "title": "第三节 游戏心态：幸福的人，总是在做另外一件事",
+        "level": 3,
+        "href": "text/part0011.html#sigil_toc_id_32",
+        "parent_id": "1965108d-47fe-41c1-aa7b-d52520f38d2e"
+      },
+      {
+        "id": "a3e808f3-e213-46ec-beb0-50d13b510aad",
+        "title": "第八章 早冥读写跑，人生五件套——成本最低的成长之道",
+        "level": 2,
+        "href": "text/part0012.html",
+        "parent_id": "b8941393-3e80-481e-aeb2-c283affbfbff"
+      },
+      {
+        "id": "4a4e5382-7aaa-4096-8f3e-34292498eb0e",
+        "title": "第一节 早起：无闹钟、不参团、不打卡，我是如何坚持早起的",
+        "level": 3,
+        "href": "text/part0012.html#sigil_toc_id_34",
+        "parent_id": "a3e808f3-e213-46ec-beb0-50d13b510aad"
+      },
+      {
+        "id": "6411805c-81a3-4ecd-bbaa-d979c6821fc4",
+        "title": "第二节 冥想：终有一天，你要解锁这条隐藏赛道",
+        "level": 3,
+        "href": "text/part0012.html#sigil_toc_id_35",
+        "parent_id": "a3e808f3-e213-46ec-beb0-50d13b510aad"
+      },
+      {
+        "id": "be787c12-0c4b-4da8-ac68-a2366c808979",
+        "title": "第三节 阅读：如何让自己真正爱上阅读",
+        "level": 3,
+        "href": "text/part0012.html#sigil_toc_id_36",
+        "parent_id": "a3e808f3-e213-46ec-beb0-50d13b510aad"
+      },
+      {
+        "id": "2a56a4bb-95b6-479a-9cd4-9632b577cb56",
+        "title": "第四节 写作：谢谢你，费曼先生",
+        "level": 3,
+        "href": "text/part0012.html#sigil_toc_id_37",
+        "parent_id": "a3e808f3-e213-46ec-beb0-50d13b510aad"
+      },
+      {
+        "id": "c44ba522-4924-45a4-8a87-caa87b8f8a42",
+        "title": "第五节 运动：灵魂想要走得远，身体必须在路上",
+        "level": 3,
+        "href": "text/part0012.html#sigil_toc_id_38",
+        "parent_id": "a3e808f3-e213-46ec-beb0-50d13b510aad"
+      },
+      {
+        "id": "7a4399cb-7b25-4c99-85f3-bea8201fcadb",
+        "title": "结语 一流的生活不是富有，而是觉知",
+        "level": 1,
+        "href": "text/part0013.html",
+        "parent_id": null
+      },
+      {
+        "id": "1bcf6595-555e-4dd8-9a26-29a6c0df32bd",
+        "title": "后记 共同改变，一起前行",
+        "level": 1,
+        "href": "text/part0014.html",
+        "parent_id": null
+      },
+      {
+        "id": "b9d7dba1-69c5-46cc-ad76-6b84e0c0697e",
+        "title": "参考文献",
+        "level": 1,
+        "href": "text/part0015.html",
+        "parent_id": null
+      }
+    ],
+    "success": true,
+    "coverInfo": {
+      "cover_image": "",
+      "cover_alt_text": "封面图片文件不存在"
+    },
+    "chapters": [],
+    "chapterStats": {
+      "totalChapters": 0,
+      "totalWords": 0,
+      "averageWords": 0,
+      "longestChapter": {
+        "index": 0,
+        "title": "",
+        "wordCount": 0
+      },
+      "shortestChapter": {
+        "index": 0,
+        "title": "",
+        "wordCount": 0
+      }
+    }
+  }
+}

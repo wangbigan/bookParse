@@ -1,0 +1,22 @@
+{
+  "id": "14c1a372-43ab-48e9-83fa-1ca5aa13a981",
+  "filename": "è®¤ç¥è§éï¼å¼å¯èªææ¹åçåå¨å (å¨å²­) (Z-Library).epub",
+  "filepath": "/Users/wbg/project/bookParse/uploads/14c1a372-43ab-48e9-83fa-1ca5aa13a981.epub",
+  "status": "parsed",
+  "createdAt": "2025-08-22T12:54:23.631Z",
+  "updatedAt": "2025-08-22T12:54:23.661Z",
+  "progress": 50,
+  "parseResult": {
+    "bookInfo": {
+      "title": "",
+      "author": "",
+      "publisher": "",
+      "isbn": "",
+      "publication_date": "",
+      "language": ""
+    },
+    "tableOfContents": [],
+    "error": "无效的EPUB文件",
+    "success": false
+  }
+}
