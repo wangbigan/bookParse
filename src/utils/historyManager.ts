@@ -332,6 +332,29 @@ class HistoryManager {
     return filteredRecords;
   }
 
+  // 获取最近访问的记录
+  getLatestRecord(): HistoryRecord | null {
+    try {
+      const records = this.getRecords();
+      
+      if (records.length === 0) {
+        return null;
+      }
+      
+      // 按最后访问时间排序，返回最近的记录
+      const sortedRecords = records.sort((a, b) => {
+        const timeA = new Date(a.lastAccessTime || a.updatedAt).getTime();
+        const timeB = new Date(b.lastAccessTime || b.updatedAt).getTime();
+        return timeB - timeA;
+      });
+      
+      return sortedRecords[0];
+    } catch (error) {
+      console.error('获取最近记录失败:', error);
+      return null;
+    }
+  }
+
   // 清理旧记录
   private cleanupOldRecords(): void {
     try {

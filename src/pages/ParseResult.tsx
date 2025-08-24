@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronDown, Book, User, Calendar, Building, Hash, Globe, Scissors, Play, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { apiService } from '../services/api';
 import { BookParseSession, ParseResult as ParseResultType, BookInfo, CoverInfo, TableOfContentsItem, ChapterContent, ChapterStats } from '../types/book';
+import { historyManager } from '../utils/historyManager';
 
 // 使用从book.ts导入的类型，移除本地重复定义
 // BookInfo, CoverInfo, TableOfContentsItem 已从 '../types/book' 导入
@@ -12,8 +13,26 @@ const ParseResult: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 从URL参数或location.state中获取文件ID
-  const actualFileId = fileId || (location.state as any)?.recordId;
+  // 从URL参数、location.state或最近记录中获取文件ID
+  const getActualFileId = (): string | null => {
+    // 优先使用URL参数中的fileId
+    if (fileId) return fileId;
+    
+    // 其次使用location.state中的recordId
+    const stateFileId = (location.state as any)?.recordId;
+    if (stateFileId) return stateFileId;
+    
+    // 最后尝试获取最近的记录ID
+    const latestRecord = historyManager.getLatestRecord();
+    if (latestRecord) {
+      console.log('使用最近的文件记录:', latestRecord.id, latestRecord.bookTitle);
+      return latestRecord.id;
+    }
+    
+    return null;
+  };
+  
+  const actualFileId = getActualFileId();
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [isSplitting, setIsSplitting] = useState(false);
   const [isSplitCompleted, setIsSplitCompleted] = useState(false);
@@ -298,20 +317,38 @@ const ParseResult: React.FC = () => {
     );
   }
 
-  // 错误状态
-  if (error) {
+  // 错误状态或缺少文件ID
+  if (error || !actualFileId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">加载失败</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadSessionData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            重试
-          </button>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            {!actualFileId ? '缺少文件信息' : '加载失败'}
+          </h2>
+          <p className="text-gray-600 mb-4">
+            {!actualFileId 
+              ? '没有找到可用的文件记录，请先上传并解析电子书文件。'
+              : error
+            }
+          </p>
+          <div className="space-y-2">
+            {!actualFileId ? (
+              <button
+                onClick={() => navigate('/')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                返回首页
+              </button>
+            ) : (
+              <button
+                onClick={loadSessionData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                重试
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

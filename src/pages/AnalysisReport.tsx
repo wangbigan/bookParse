@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Brain, BookOpen, Download, Copy, Play, CheckCircle, Clock, Tag, RotateCcw, Zap } from 'lucide-react';
 import apiService from '../services/api';
 import { BookParseSession, ChapterAnalysisResult, BookSummary, ArgumentInfo } from '../types/book';
+import { historyManager } from '../utils/historyManager';
 
 // 本地章节数据类型（用于UI显示）
 interface Chapter {
@@ -22,7 +23,23 @@ interface LocalBookSummary extends BookSummary {
 const AnalysisReport: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const fileId = searchParams.get('fileId');
+  
+  // 获取文件ID，优先使用URL参数，其次使用最近的记录
+  const getFileId = (): string | null => {
+    const urlFileId = searchParams.get('fileId');
+    if (urlFileId) return urlFileId;
+    
+    // 尝试获取最近的记录ID
+    const latestRecord = historyManager.getLatestRecord();
+    if (latestRecord) {
+      console.log('分析报告页面使用最近的文件记录:', latestRecord.id, latestRecord.bookTitle);
+      return latestRecord.id;
+    }
+    
+    return null;
+  };
+  
+  const fileId = getFileId();
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -527,7 +544,7 @@ const AnalysisReport: React.FC = () => {
                   <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>
                     {!fileId 
-                      ? '缺少文件ID参数，请从解析结果页面跳转' 
+                      ? '没有找到可用的文件记录，请先上传并解析电子书文件。' 
                       : session?.status === 'parsed' 
                       ? '请先进行章节拆分' 
                       : '暂无章节数据，请先进行EPUB解析和章节拆分'
