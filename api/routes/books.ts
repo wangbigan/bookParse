@@ -372,27 +372,16 @@ router.post('/:fileId/analyze', async (req, res) => {
       console.log(`[DEBUG] 单章节分析 - 保留现有结果并更新指定章节`);
     }
 
-    // 只有在批量分析（分析所有章节或大部分章节）时才生成书籍总结
+    // 移除自动生成书籍总结的逻辑，改为由前端用户主动触发
+    // 章节分析完成后不再自动生成书籍总结
     let bookSummary = null;
-    const totalChapters = chapters.length;
-    const analyzedChapters = chapterIndexes ? chapterIndexes.length : totalChapters;
-    
-    // 如果分析的章节数量超过总章节数的一半，或者没有指定章节索引（分析所有章节），则生成书籍总结
-    if (!chapterIndexes || analyzedChapters >= Math.ceil(totalChapters / 2)) {
-      console.log(`[DEBUG] 生成书籍总结 - 分析章节数: ${analyzedChapters}, 总章节数: ${totalChapters}`);
-      bookSummary = await deepSeekProvider.generateBookSummary(
-        session.parseResult.bookInfo,
-        analysisResults
-      );
-    } else {
-      console.log(`[DEBUG] 跳过书籍总结生成 - 单章节分析，章节索引: ${chapterIndexes}`);
-    }
+    console.log(`[DEBUG] 章节分析完成，跳过自动书籍总结生成 - 等待用户主动触发`);
 
-    // 更新解析结果
+    // 更新解析结果（不包含自动生成的书籍总结）
     const updatedParseResult = {
       ...session.parseResult,
       chapterAnalysis: finalAnalysisResults,
-      bookSummary
+      bookSummary: session.parseResult?.bookSummary || null // 保留现有的书籍总结（如果有的话）
     };
     
     console.log(`[DEBUG] 准备保存分析结果到会话 - 章节数量: ${finalAnalysisResults.length}`);
@@ -577,6 +566,121 @@ router.delete('/:fileId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || '删除会话失败'
+    });
+  }
+});
+
+/**
+ * POST /api/books/:fileId/generate-summary
+ * 生成书籍总结
+ */
+router.post('/:fileId/generate-summary', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const session = fileManager.getSession(fileId);
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: '会话不存在'
+      });
+    }
+
+    if (!session.parseResult) {
+      return res.status(400).json({
+        success: false,
+        message: '解析结果不存在，请先进行EPUB解析'
+      });
+    }
+
+    if (!session.parseResult.chapterAnalysis || session.parseResult.chapterAnalysis.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '章节分析结果不存在，请先进行章节分析'
+      });
+    }
+
+    // 检查是否有足够的章节分析数据
+    const validAnalysis = session.parseResult.chapterAnalysis.filter(analysis => analysis !== null);
+    if (validAnalysis.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '没有有效的章节分析数据，请先完成章节分析'
+      });
+    }
+
+    // 添加日志
+    await fileManager.addLog(fileId, {
+      id: uuidv4(),
+      fileId,
+      timestamp: new Date(),
+      operation: '开始生成书籍总结',
+      status: 'in_progress',
+      message: `基于${validAnalysis.length}个章节分析生成书籍总结`
+    });
+
+    console.log(`[DEBUG] 开始生成书籍总结 - 文件ID: ${fileId}, 有效章节分析数: ${validAnalysis.length}`);
+
+    // 调用DeepSeek生成书籍总结
+    const bookSummary = await deepSeekProvider.generateBookSummary(
+      session.parseResult.bookInfo,
+      validAnalysis
+    );
+
+    console.log(`[DEBUG] 书籍总结生成完成`);
+
+    // 更新解析结果
+    const updatedParseResult = {
+      ...session.parseResult,
+      bookSummary
+    };
+
+    // 更新会话
+    await fileManager.updateSession(fileId, {
+      parseResult: updatedParseResult
+    });
+
+    // 添加成功日志
+    await fileManager.addLog(fileId, {
+      id: uuidv4(),
+      fileId,
+      timestamp: new Date(),
+      operation: '书籍总结生成完成',
+      status: 'completed',
+      message: '成功生成书籍总结',
+      details: {
+        themes: bookSummary.mainThemes.length,
+        insights: bookSummary.keyInsights.length,
+        rating: bookSummary.rating
+      }
+    });
+
+    console.log(`[DEBUG] 书籍总结已保存到会话数据`);
+
+    res.json({
+      success: true,
+      data: {
+        session: fileManager.getSession(fileId),
+        bookSummary
+      },
+      message: '书籍总结生成完成'
+    });
+  } catch (error) {
+    console.error('生成书籍总结失败:', error);
+    
+    // 添加错误日志
+    await fileManager.addLog(req.params.fileId, {
+      id: uuidv4(),
+      fileId: req.params.fileId,
+      timestamp: new Date(),
+      operation: '书籍总结生成失败',
+      status: 'error',
+      message: error.message
+    });
+
+    res.status(500).json({
+      success: false,
+      message: error.message || '生成书籍总结失败'
     });
   }
 });

@@ -197,6 +197,26 @@ class ApiService {
   }
 
   /**
+   * 生成书籍总结
+   */
+  async generateBookSummary(fileId: string): Promise<{ session: BookParseSession; bookSummary: BookSummary }> {
+    try {
+      const response = await this.client.post<ApiResponse<{ session: BookParseSession; bookSummary: BookSummary }>>(
+        `/api/books/${fileId}/generate-summary`
+      );
+
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.message || '生成书籍总结失败');
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('生成书籍总结失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 获取解析会话信息
    */
   async getSession(fileId: string): Promise<{ session: BookParseSession; logs: OperationLog[] }> {

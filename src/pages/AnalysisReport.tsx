@@ -340,16 +340,40 @@ const AnalysisReport: React.FC = () => {
     }
   };
 
+  /**
+   * 处理生成书籍总结
+   */
   const handleGenerateSummary = async () => {
+    if (!fileId) {
+      alert('缺少文件ID，无法生成书籍总结');
+      return;
+    }
+
     setIsGeneratingSummary(true);
     
     try {
-      // TODO: 调用后端API生成书籍总结
-      // const summary = await apiService.generateBookSummary(fileId);
-      // setBookSummary({ ...summary, generated: true });
-      alert('书籍总结功能需要连接后端API');
+      console.log('[DEBUG] 开始生成书籍总结...');
+      
+      // 调用后端API生成书籍总结
+      const { session: updatedSession, bookSummary: generatedSummary } = await apiService.generateBookSummary(fileId);
+      
+      console.log('[DEBUG] 书籍总结生成成功:', generatedSummary);
+      
+      // 更新本地状态
+      setBookSummary({
+        ...generatedSummary,
+        generated: true
+      });
+      
+      // 更新会话状态
+      setSession(updatedSession);
+      
+      console.log('[DEBUG] 前端状态已更新');
+      
     } catch (error) {
-      alert('生成书籍总结失败，请重试');
+      console.error('[ERROR] 生成书籍总结失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '生成书籍总结失败，请重试';
+      alert(errorMessage);
     } finally {
       setIsGeneratingSummary(false);
     }

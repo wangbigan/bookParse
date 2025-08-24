@@ -486,14 +486,36 @@ ${analysisOverview}
     bookInfo: BookInfo
   ): BookSummary {
     try {
+      console.log('开始解析书籍总结响应...');
+      console.log('原始响应长度:', response.length);
+      
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('响应中未找到有效的JSON格式');
       }
       
-      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('提取的JSON字符串长度:', jsonMatch[0].length);
+      console.log('提取的JSON字符串前200字符:', jsonMatch[0].substring(0, 200));
       
-      return {
+      // 使用cleanJsonString方法清理JSON格式
+      const cleanedJson = this.cleanJsonString(jsonMatch[0]);
+      console.log('清理后的JSON字符串前200字符:', cleanedJson.substring(0, 200));
+      
+      let parsed;
+      try {
+        // 首先尝试直接解析清理后的JSON
+        parsed = JSON.parse(cleanedJson);
+        console.log('JSON解析成功');
+      } catch (parseError) {
+        console.warn('直接解析失败，尝试备用解析策略:', parseError.message);
+        // 使用备用解析策略
+        parsed = this.fallbackJsonParse(cleanedJson);
+        console.log('备用解析策略完成');
+      }
+      
+      console.log('解析结果字段:', Object.keys(parsed));
+      
+      const bookSummary = {
         overview: parsed.overview || '无概述',
         mainThemes: Array.isArray(parsed.mainThemes) ? parsed.mainThemes : [],
         keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
@@ -507,10 +529,18 @@ ${analysisOverview}
         tags: Array.isArray(parsed.tags) ? parsed.tags : [],
         generatedDate: new Date()
       };
+      
+      console.log('书籍总结解析完成，主题数量:', bookSummary.mainThemes.length);
+      console.log('书籍总结解析完成，洞察数量:', bookSummary.keyInsights.length);
+      
+      return bookSummary;
     } catch (error) {
       console.error('解析书籍总结响应失败:', error);
+      console.error('错误堆栈:', error.stack);
+      
+      // 返回默认的书籍总结结构
       return {
-        overview: '总结生成失败',
+        overview: '总结生成失败: ' + error.message,
         mainThemes: [],
         keyInsights: [],
         structure: '无',

@@ -131,6 +131,25 @@ const ParseResult: React.FC = () => {
   }, [actualFileId, navigate]);
 
   /**
+   * 重新拆分章节
+   */
+  const handleReSplit = useCallback(() => {
+    // 重置拆分完成状态，允许用户重新选择层级并拆分
+    setIsSplitCompleted(false);
+    
+    // 清空当前章节数据
+    if (parseResult) {
+      setParseResult({
+        ...parseResult,
+        chapters: [],
+        chapterStats: undefined
+      });
+    }
+    
+    console.log('重置拆分状态，用户可以重新选择层级进行拆分');
+  }, [parseResult]);
+
+  /**
    * 加载解析会话数据
    */
   const loadSessionData = async () => {
@@ -322,9 +341,9 @@ const ParseResult: React.FC = () => {
 
               {/* 封面图片展示区 */}
               <div className="mb-6">
-                {coverInfo?.url ? (
+                {(coverInfo?.url || (coverInfo as any)?.cover_image) ? (
                   <img
-                    src={coverInfo.url}
+                    src={coverInfo?.url || (coverInfo as any)?.cover_image}
                     alt="书籍封面"
                     className="w-32 h-48 object-cover rounded-lg shadow-lg"
                   />
@@ -480,16 +499,28 @@ const ParseResult: React.FC = () => {
                     )}
                   </button>
                 ) : (
-                  <button
-                    onClick={handleGoToAnalysis}
-                    className="
-                      flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg
-                      hover:bg-green-700 transition-colors font-medium w-full justify-center
-                    "
-                  >
-                    <ArrowRight className="h-5 w-5" />
-                    <span>下一步：章节分析</span>
-                  </button>
+                  <div className="flex space-x-3 w-full">
+                    <button
+                      onClick={handleReSplit}
+                      className="
+                        flex items-center space-x-2 px-4 py-3 bg-gray-600 text-white rounded-lg
+                        hover:bg-gray-700 transition-colors font-medium flex-1 justify-center
+                      "
+                    >
+                      <Scissors className="h-5 w-5" />
+                      <span>重新拆分</span>
+                    </button>
+                    <button
+                      onClick={handleGoToAnalysis}
+                      className="
+                        flex items-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg
+                        hover:bg-green-700 transition-colors font-medium flex-1 justify-center
+                      "
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                      <span>下一步：章节分析</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

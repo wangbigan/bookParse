@@ -226,6 +226,13 @@ export class EPUBParser extends BaseParser {
     return typeof value === 'string' ? value : value._ || '';
   }
 
+  /**
+   * 提取封面信息
+   * @param zip EPUB文件的ZIP对象
+   * @param opfData OPF文件数据
+   * @param opfDir OPF文件所在目录
+   * @returns 封面信息对象
+   */
   private async extractCoverInfo(zip: JSZip, opfData: any, opfDir: string): Promise<CoverInfo | undefined> {
     if (!this.config.extractCover) {
       console.log('封面提取已禁用');
@@ -234,28 +241,50 @@ export class EPUBParser extends BaseParser {
 
     try {
       console.log('开始提取封面信息...');
-      // 查找封面图片
       const manifest = opfData.package.manifest[0].item;
+      const metadata = opfData.package.metadata[0];
+      let coverImageId = null;
       let coverImagePath = '';
       
       console.log(`清单中包含 ${manifest.length} 个文件`);
       
-      // 方法1: 查找cover-image
-      console.log('方法1: 查找cover-image属性...');
-      for (const item of manifest) {
-        if (item.$?.properties === 'cover-image' || item.$?.id === 'cover-image') {
-          coverImagePath = item.$?.href;
-          console.log(`找到封面图片: ${coverImagePath}`);
-          break;
+      // 调试：显示ZIP文件中的所有文件路径
+      console.log('ZIP文件中的所有文件:');
+      zip.forEach((relativePath, file) => {
+        if (!file.dir) {
+          console.log(`  - ${relativePath}`);
+        }
+      });
+      
+      // 方法1: 查找metadata中的cover属性
+      console.log('方法1: 查找metadata中的cover属性...');
+      if (metadata && metadata.cover) {
+        coverImageId = metadata.cover;
+        console.log(`在metadata中找到cover属性: ${coverImageId}`);
+        const coverItem = manifest.find((item: any) => item.$?.id === coverImageId);
+        if (coverItem) {
+          coverImagePath = coverItem.$?.href;
+          console.log(`通过metadata.cover找到封面图片: ${coverImagePath}`);
         }
       }
       
-      // 方法2: 查找meta标签中的cover
-      if (!coverImagePath && opfData.package.metadata[0].meta) {
-        console.log('方法2: 查找meta标签中的cover...');
-        const metaTags = Array.isArray(opfData.package.metadata[0].meta) 
-          ? opfData.package.metadata[0].meta 
-          : [opfData.package.metadata[0].meta];
+      // 方法2: 查找cover-image属性
+      if (!coverImagePath) {
+        console.log('方法2: 查找cover-image属性...');
+        for (const item of manifest) {
+          if (item.$?.properties === 'cover-image' || item.$?.id === 'cover-image') {
+            coverImagePath = item.$?.href;
+            coverImageId = item.$?.id;
+            console.log(`找到cover-image属性: ${coverImagePath}`);
+            break;
+          }
+        }
+      }
+      
+      // 方法3: 查找meta标签中的cover
+      if (!coverImagePath && metadata.meta) {
+        console.log('方法3: 查找meta标签中的cover...');
+        const metaTags = Array.isArray(metadata.meta) ? metadata.meta : [metadata.meta];
         
         console.log(`找到 ${metaTags.length} 个meta标签`);
         for (const meta of metaTags) {
@@ -265,6 +294,7 @@ export class EPUBParser extends BaseParser {
             const coverItem = manifest.find((item: any) => item.$?.id === coverId);
             if (coverItem) {
               coverImagePath = coverItem.$?.href;
+              coverImageId = coverId;
               console.log(`通过meta标签找到封面图片: ${coverImagePath}`);
               break;
             }
@@ -272,10 +302,30 @@ export class EPUBParser extends BaseParser {
         }
       }
       
-      // 方法3: 查找常见的封面文件名
+      // 方法4: 在manifest中查找cover相关的图片
       if (!coverImagePath) {
-        console.log('方法3: 查找常见的封面文件名...');
-        const commonCoverNames = ['cover.jpg', 'cover.jpeg', 'cover.png', 'cover.gif'];
+        console.log('方法4: 在manifest中查找cover相关的图片...');
+        for (const item of manifest) {
+          const mediaType = item.$?.['media-type'] || '';
+          const itemId = item.$?.id || '';
+          const itemHref = item.$?.href || '';
+          
+          if (mediaType.startsWith('image/')) {
+            if (itemId.toLowerCase().includes('cover') || 
+                itemHref.toLowerCase().includes('cover')) {
+              coverImagePath = itemHref;
+              coverImageId = itemId;
+              console.log(`在manifest中找到cover相关图片: ${coverImagePath}`);
+              break;
+            }
+          }
+        }
+      }
+      
+      // 方法5: 查找常见的封面文件名
+      if (!coverImagePath) {
+        console.log('方法5: 查找常见的封面文件名...');
+        const commonCoverNames = ['cover.jpg', 'cover.jpeg', 'cover.png', 'cover.gif', 'cover.webp'];
         for (const name of commonCoverNames) {
           const fullPath = opfDir ? `${opfDir}/${name}` : name;
           console.log(`检查文件: ${fullPath}`);
@@ -287,40 +337,104 @@ export class EPUBParser extends BaseParser {
         }
       }
       
-      // 方法4: 查找第一个图片文件
+      // 方法6: 使用第一个图片作为封面
       if (!coverImagePath) {
-        console.log('方法4: 查找第一个图片文件...');
+        console.log('方法6: 使用第一个图片作为封面...');
         for (const item of manifest) {
           const mediaType = item.$?.['media-type'] || '';
           if (mediaType.startsWith('image/')) {
             coverImagePath = item.$?.href;
-            console.log(`找到第一个图片文件: ${coverImagePath}`);
+            coverImageId = item.$?.id;
+            console.log(`使用第一个图片文件作为封面: ${coverImagePath}`);
             break;
           }
         }
       }
 
+      // 如果没有找到封面图片，返回空结果
       if (!coverImagePath) {
+        console.warn('未找到任何封面图片');
         return {
           cover_image: '',
           cover_alt_text: '无封面图片'
         };
       }
 
-      // 读取封面图片
-      const fullCoverPath = opfDir ? `${opfDir}/${coverImagePath}` : coverImagePath;
-      const coverFile = zip.file(fullCoverPath);
+      // 读取封面图片文件
+      console.log(`准备读取封面图片: ${coverImagePath}`);
+      
+      // 尝试多种路径策略来查找封面文件
+      const pathsToTry = [];
+      
+      // 策略1: 直接使用原始路径
+      pathsToTry.push(coverImagePath);
+      
+      // 策略2: 如果opfDir不为空且不为".",则添加opfDir前缀
+      if (opfDir && opfDir !== '.') {
+        pathsToTry.push(`${opfDir}/${coverImagePath}`);
+      }
+      
+      // 策略3: 如果路径以"./"开头，去掉前缀
+      if (coverImagePath.startsWith('./')) {
+        pathsToTry.push(coverImagePath.substring(2));
+      }
+      
+      // 策略4: 如果路径不以"./"开头，添加"./"前缀
+      if (!coverImagePath.startsWith('./')) {
+        pathsToTry.push(`./${coverImagePath}`);
+      }
+      
+      // 策略5: 尝试在常见目录中查找
+      const commonDirs = ['', 'OEBPS', 'content', 'images', 'img'];
+      for (const dir of commonDirs) {
+        if (dir) {
+          pathsToTry.push(`${dir}/${coverImagePath}`);
+          // 如果coverImagePath已经包含目录，也尝试只用文件名
+          const fileName = coverImagePath.split('/').pop();
+          if (fileName && fileName !== coverImagePath) {
+            pathsToTry.push(`${dir}/${fileName}`);
+          }
+        }
+      }
+      
+      console.log(`尝试以下路径查找封面文件:`);
+      pathsToTry.forEach(path => console.log(`  - ${path}`));
+      
+      let coverFile = null;
+      let actualPath = '';
+      
+      // 逐一尝试每个路径
+      for (const path of pathsToTry) {
+        coverFile = zip.file(path);
+        if (coverFile) {
+          actualPath = path;
+          console.log(`成功找到封面文件: ${actualPath}`);
+          break;
+        }
+      }
       
       if (!coverFile) {
+        console.warn(`所有路径都无法找到封面图片文件`);
+        console.warn(`尝试的路径: ${pathsToTry.join(', ')}`);
         return {
           cover_image: '',
           cover_alt_text: '封面图片文件不存在'
         };
       }
 
+      // 获取图片数据
       const imageBuffer = await coverFile.async('nodebuffer');
       
-      // 使用sharp处理图片
+      if (!imageBuffer || imageBuffer.length === 0) {
+        console.warn('封面图片数据为空');
+        return {
+          cover_image: '',
+          cover_alt_text: '封面图片数据为空'
+        };
+      }
+
+      // 使用sharp处理图片，保持现有的图片处理逻辑
+      console.log('开始处理封面图片...');
       const processedImage = await sharp(imageBuffer)
         .resize(this.config.maxCoverSize, this.config.maxCoverSize, {
           fit: 'inside',
@@ -329,14 +443,17 @@ export class EPUBParser extends BaseParser {
         .jpeg({ quality: this.config.imageQuality })
         .toBuffer();
 
+      // 转换为base64格式
       const base64Image = `data:image/jpeg;base64,${processedImage.toString('base64')}`;
       
+      console.log('封面图片处理完成');
       return {
         cover_image: base64Image,
         cover_alt_text: '书籍封面'
       };
     } catch (error) {
-      console.error('封面提取错误:', error);
+      console.warn('封面提取过程中发生错误:', error);
+      // 改进错误处理，不抛出异常，而是返回空结果
       return {
         cover_image: '',
         cover_alt_text: '封面提取失败'
