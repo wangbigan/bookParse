@@ -138,7 +138,7 @@ export interface BookParseSession {
   id: string;
   filename: string;
   filepath: string;
-  status: 'uploaded' | 'parsed' | 'split' | 'analyzing' | 'completed' | 'error';
+  status: 'uploaded' | 'parsed' | 'split' | 'analyzed' | 'completed';
   progress: number;
   createdAt: Date;
   updatedAt: Date;

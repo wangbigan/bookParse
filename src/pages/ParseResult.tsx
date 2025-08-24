@@ -112,6 +112,25 @@ const ParseResult: React.FC = () => {
         setParseResult(updatedSession.parseResult);
       }
       
+      // 更新历史记录状态为已拆分
+      try {
+        const updateSuccess = historyManager.updateRecord(actualFileId, {
+          status: 'split',
+          progress: 60, // 拆分完成约60%进度
+          updatedAt: new Date()
+        });
+        
+        if (updateSuccess) {
+          console.log('✅ 历史记录状态已更新为已拆分');
+          // 触发全局更新事件，通知其他组件刷新
+          window.dispatchEvent(new Event('historyUpdated'));
+        } else {
+          console.warn('⚠️ 历史记录状态更新失败');
+        }
+      } catch (historyError) {
+        console.error('❌ 更新历史记录状态时发生错误:', historyError);
+      }
+      
       // 设置拆分完成状态
       setIsSplitCompleted(true);
       

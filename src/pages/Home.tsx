@@ -168,7 +168,7 @@ const Home: React.FC<HomeProps> = ({ onHistoryUpdate }) => {
       
       // 更新历史记录状态
       historyManager.updateRecord(fileId, {
-        status: 'error',
+        status: 'uploaded',
         updatedAt: new Date()
       });
     } finally {

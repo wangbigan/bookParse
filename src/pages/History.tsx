@@ -13,9 +13,8 @@ const statusConfig = {
   uploaded: { label: '已上传', color: 'bg-blue-100 text-blue-800', icon: '📁' },
   parsed: { label: '已解析', color: 'bg-green-100 text-green-800', icon: '📖' },
   split: { label: '已拆分', color: 'bg-purple-100 text-purple-800', icon: '📄' },
-  analyzing: { label: '分析中', color: 'bg-orange-100 text-orange-800', icon: '🤖' },
-  completed: { label: '已完成', color: 'bg-green-100 text-green-800', icon: '✅' },
-  error: { label: '失败', color: 'bg-red-100 text-red-800', icon: '❌' },
+  analyzed: { label: '已分析', color: 'bg-orange-100 text-orange-800', icon: '🤖' },
+  completed: { label: '已总结', color: 'bg-green-100 text-green-800', icon: '✅' },
   default: { label: '未知', color: 'bg-gray-100 text-gray-800', icon: '❓' }
 } as const;
 
@@ -90,28 +89,43 @@ const History: React.FC<HistoryProps> = ({ onHistoryUpdate }) => {
     }
   };
 
+  /**
+   * 处理继续解析按钮点击事件
+   * 根据不同状态跳转到不同页面
+   */
+  const handleContinueParsing = (record: HistoryRecord) => {
+    switch (record.status) {
+      case 'uploaded':
+        // 已上传状态：进行文件解析
+        navigate('/parse-result', { state: { recordId: record.id } });
+        break;
+      case 'parsed':
+        // 已解析状态：跳转到解析结果界面进行章节拆分
+        navigate('/parse-result', { state: { recordId: record.id } });
+        break;
+      case 'split':
+        // 已拆分状态：跳转到分析报告界面进行章节分析
+        navigate(`/analysis-report?fileId=${record.id}`);
+        break;
+      case 'analyzed':
+        // 已分析状态：跳转到分析报告界面进行书籍总结
+        navigate(`/analysis-report?fileId=${record.id}`);
+        break;
+      default:
+        console.warn('未知状态:', record.status);
+    }
+  };
+
+  /**
+   * 处理查看结果按钮点击事件
+   */
   const handleViewResult = (record: HistoryRecord) => {
     if (record.status === 'completed') {
+      // 已完成状态：查看完整结果
       navigate('/real-time-result', { state: { recordId: record.id } });
-    }
-  };
-
-  const handleContinueParsing = (record: HistoryRecord) => {
-    if (['analyzing', 'parsed', 'uploaded'].includes(record.status)) {
-      navigate('/parse-result', { state: { recordId: record.id } });
-    }
-  };
-
-  const handleRetryParsing = (record: HistoryRecord) => {
-    if (record.status === 'error') {
-      // 更新状态为已上传，准备重新解析
-      historyManager.updateRecord(record.id, { 
-        status: 'uploaded', 
-        progress: 0,
-        errorMessage: undefined 
-      });
-      loadRecords();
-      navigate('/parse-result', { state: { recordId: record.id } });
+    } else {
+      // 其他状态：跳转到对应页面
+      handleContinueParsing(record);
     }
   };
 
@@ -136,9 +150,8 @@ const History: React.FC<HistoryProps> = ({ onHistoryUpdate }) => {
     uploaded: records.filter(r => r.status === 'uploaded').length,
     parsed: records.filter(r => r.status === 'parsed').length,
     split: records.filter(r => r.status === 'split').length,
-    analyzing: records.filter(r => r.status === 'analyzing').length,
-    completed: records.filter(r => r.status === 'completed').length,
-    error: records.filter(r => r.status === 'error').length
+    analyzed: records.filter(r => r.status === 'analyzed').length,
+    completed: records.filter(r => r.status === 'completed').length
   } as const;
 
   // 获取状态计数的安全函数
@@ -305,13 +318,25 @@ const History: React.FC<HistoryProps> = ({ onHistoryUpdate }) => {
 
                       {/* 操作按钮 */}
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {(record.status === 'completed' || record.status === 'parsed') && (
+                        {/* 查看结果按钮 - 仅在已完成状态显示 */}
+                        {record.status === 'completed' && (
                           <button 
                             onClick={() => handleViewResult(record)}
                             className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                           >
                             <Eye className="w-4 h-4" />
                             查看结果
+                          </button>
+                        )}
+                        
+                        {/* 继续按钮 - 根据不同状态显示不同文本 */}
+                        {record.status === 'uploaded' && (
+                          <button 
+                            onClick={() => handleContinueParsing(record)}
+                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                          >
+                            <Play className="w-4 h-4" />
+                            继续解析
                           </button>
                         )}
                         {record.status === 'parsed' && (
@@ -323,24 +348,26 @@ const History: React.FC<HistoryProps> = ({ onHistoryUpdate }) => {
                             继续拆分
                           </button>
                         )}
-                        {record.status === 'uploaded' && (
+                        {record.status === 'split' && (
                           <button 
                             onClick={() => handleContinueParsing(record)}
                             className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                           >
                             <Play className="w-4 h-4" />
-                            继续解析
+                            继续分析
                           </button>
                         )}
-                        {record.status === 'error' && (
+                        {record.status === 'analyzed' && (
                           <button 
-                            onClick={() => handleRetryParsing(record)}
-                            className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                            onClick={() => handleContinueParsing(record)}
+                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                           >
                             <Play className="w-4 h-4" />
-                            重新解析
+                            生成总结
                           </button>
                         )}
+                        
+                        {/* 删除按钮 */}
                         <button
                           onClick={() => handleDeleteRecord(record.id)}
                           className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"

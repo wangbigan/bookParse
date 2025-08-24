@@ -339,8 +339,8 @@ class ApiService {
           const { session } = await this.getSession(fileId);
           onUpdate(session);
           
-          // 如果任务完成或出错，停止轮询
-          if (session.status === 'completed' || session.status === 'error') {
+          // 如果任务完成，停止轮询
+          if (session.status === 'completed') {
             break;
           }
           

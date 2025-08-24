@@ -208,7 +208,7 @@ const RealTimeResult: React.FC = () => {
                 <div className="space-y-3">
                   {[
                     { key: 'upload' as const, label: '文件上传' },
-                    { key: 'parse' as const, label: 'EPUB解析' },
+                    { key: 'parse' as const, label: '文件解析' },
                     { key: 'split' as const, label: '章节拆分' },
                     { key: 'analyze' as const, label: '章节分析' },
                     { key: 'summary' as const, label: '书籍总结' }

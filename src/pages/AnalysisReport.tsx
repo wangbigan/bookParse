@@ -113,7 +113,7 @@ const AnalysisReport: React.FC = () => {
         }
         
         // 如果会话状态为已拆分，获取章节数据
-          if (sessionData.status === 'split' || sessionData.status === 'analyzing' || sessionData.status === 'completed') {
+          if (sessionData.status === 'split' || sessionData.status === 'analyzed' || sessionData.status === 'completed') {
            // 从会话的解析结果中获取章节数据
            if (sessionData.parseResult?.chapters && sessionData.parseResult.chapters.length > 0) {
              const analysisData = sessionData.parseResult?.chapterAnalysis || [];
@@ -260,9 +260,8 @@ const AnalysisReport: React.FC = () => {
         
         if (analysisResult && analysisResult !== null) {
           // 更新本地状态
-          setChapters(prev => prev.map(ch => {
+          const updatedChapters = chapters.map(ch => {
             if (ch.id === chapterId) {
-              console.log(`[DEBUG] 更新章节 ${chapterId} 的分析结果`);
               return {
                 ...ch,
                 chapter_viewpoint: analysisResult.summary || ch.chapter_viewpoint,
@@ -272,7 +271,12 @@ const AnalysisReport: React.FC = () => {
               };
             }
             return ch;
-          }));
+          });
+          
+          setChapters(updatedChapters);
+          
+          // 检查并更新分析状态
+          checkAndUpdateAnalysisStatus(updatedChapters);
           
           // 同步数据到后端 - 单章节分析已经通过analyzeChapters API调用自动保存到后端
           console.log(`[DEBUG] 单章节分析结果已自动保存到后端会话数据`);
@@ -302,6 +306,40 @@ const AnalysisReport: React.FC = () => {
         console.log(`[DEBUG] 单章节分析完成，移除章节ID: ${chapterId}，当前状态:`, Array.from(newSet));
         return newSet;
       });
+    }
+  };
+
+  /**
+   * 检查并更新分析状态
+   * 当所有章节都分析完成时，更新历史记录状态为'analyzed'
+   */
+  const checkAndUpdateAnalysisStatus = (updatedChapters: Chapter[]) => {
+    const analyzedCount = updatedChapters.filter(ch => ch.analyzed).length;
+    const totalChapters = updatedChapters.length;
+    
+    console.log(`[DEBUG] 检查分析状态: ${analyzedCount}/${totalChapters} 章节已分析`);
+    
+    if (analyzedCount === totalChapters && totalChapters > 0) {
+      console.log('[DEBUG] 所有章节分析完成，更新历史记录状态为analyzed');
+      
+      try {
+        // 更新历史记录状态为已分析
+        const updateSuccess = historyManager.updateRecord(fileId!, {
+          status: 'analyzed',
+          progress: 80, // 分析完成设置为80%
+          updatedAt: new Date()
+        });
+        
+        if (updateSuccess) {
+          console.log('[DEBUG] 历史记录状态更新成功');
+          // 触发全局更新事件
+          window.dispatchEvent(new Event('historyUpdated'));
+        } else {
+          console.warn('[DEBUG] 历史记录状态更新失败');
+        }
+      } catch (error) {
+        console.error('[ERROR] 更新历史记录状态失败:', error);
+      }
     }
   };
 
@@ -340,6 +378,9 @@ const AnalysisReport: React.FC = () => {
            return chapter;
          });
          setChapters(updatedChapters);
+         
+         // 检查并更新分析状态
+         checkAndUpdateAnalysisStatus(updatedChapters);
        }
        
        // 更新书籍总结
@@ -427,6 +468,41 @@ const AnalysisReport: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  /**
+   * 检测章节是否解析失败
+   * @param chapter 章节对象
+   * @returns 是否解析失败
+   */
+  const isChapterAnalysisFailed = (chapter: Chapter): boolean => {
+    // 如果章节未标记为analyzed，则不是解析失败
+    if (!chapter.analyzed) {
+      return false;
+    }
+
+    // 检查核心观点是否为空或包含失败信息
+    const viewpointFailed = !chapter.chapter_viewpoint || 
+      chapter.chapter_viewpoint.trim() === '' ||
+      chapter.chapter_viewpoint === '无章节观点总结' ||
+      chapter.chapter_viewpoint === '解析失败，无法获取摘要';
+
+    // 检查关键词是否为空
+    const keywordsFailed = !chapter.chapter_keywords || chapter.chapter_keywords.length === 0;
+
+    // 只要核心观点失败或关键词失败，就认为是解析失败
+    const failed = viewpointFailed || keywordsFailed;
+    
+    // 添加调试日志
+    console.log(`[DEBUG] 章节解析失败检测 - ID: ${chapter.id}, 标题: ${chapter.chapter_title}`);
+    console.log(`[DEBUG] - analyzed: ${chapter.analyzed}`);
+    console.log(`[DEBUG] - viewpoint: "${chapter.chapter_viewpoint}"`);
+    console.log(`[DEBUG] - keywords: [${chapter.chapter_keywords?.join(', ')}]`);
+    console.log(`[DEBUG] - viewpointFailed: ${viewpointFailed}`);
+    console.log(`[DEBUG] - keywordsFailed: ${keywordsFailed}`);
+    console.log(`[DEBUG] - 最终判断失败: ${failed}`);
+    
+    return failed;
   };
 
   const analyzedCount = chapters.filter(ch => ch.analyzed).length;
@@ -547,7 +623,7 @@ const AnalysisReport: React.FC = () => {
                       ? '没有找到可用的文件记录，请先上传并解析电子书文件。' 
                       : session?.status === 'parsed' 
                       ? '请先进行章节拆分' 
-                      : '暂无章节数据，请先进行EPUB解析和章节拆分'
+                      : '暂无章节数据，请先进行文件解析和章节拆分'
                     }
                   </p>
                   {!fileId && (
@@ -578,20 +654,24 @@ const AnalysisReport: React.FC = () => {
                     <h3 className="font-medium text-gray-900">{chapter.chapter_title}</h3>
                     <div className="flex items-center space-x-2">
                       {/* 单章节分析按钮 */}
-                      {!chapter.analyzed && !singleAnalyzing.has(chapter.id) && analyzingChapter !== chapter.id && !isAnalyzing && (
+                      {(!chapter.analyzed || isChapterAnalysisFailed(chapter)) && !singleAnalyzing.has(chapter.id) && analyzingChapter !== chapter.id && !isAnalyzing && (
                         <button
                           onClick={() => {
-                            console.log(`[DEBUG] 点击分析按钮，章节ID: ${chapter.id}, 索引: ${index}`);
+                            console.log(`[DEBUG] 点击${isChapterAnalysisFailed(chapter) ? '重新' : ''}分析按钮，章节ID: ${chapter.id}, 索引: ${index}`);
                             handleAnalyzeSingleChapter(chapter.id);
                           }}
-                          className="
-                            flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-xs
-                            hover:bg-blue-700 transition-colors font-medium
-                          "
-                          title="分析此章节"
+                          className={`
+                            flex items-center space-x-1 px-2 py-1 text-white rounded text-xs
+                            transition-colors font-medium
+                            ${isChapterAnalysisFailed(chapter) 
+                              ? 'bg-orange-600 hover:bg-orange-700' 
+                              : 'bg-blue-600 hover:bg-blue-700'
+                            }
+                          `}
+                          title={isChapterAnalysisFailed(chapter) ? '重新分析此章节' : '分析此章节'}
                         >
                           <Zap className="h-3 w-3" />
-                          <span>分析</span>
+                          <span>{isChapterAnalysisFailed(chapter) ? '重新分析' : '分析'}</span>
                         </button>
                       )}
                       
