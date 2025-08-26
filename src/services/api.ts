@@ -1,6 +1,7 @@
 // 前端API服务
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { BookParseSession, OperationLog, ParseResult, ChapterAnalysisResult, BookSummary } from '../types/book';
+import { configService, AIConfig } from './configService';
 
 // API响应类型
 interface ApiResponse<T = any> {
@@ -48,6 +49,18 @@ class ApiService {
     this.client.interceptors.request.use(
       (config) => {
         console.log(`API请求: ${config.method?.toUpperCase()} ${config.url}`);
+        
+        // 自动添加AI配置到请求头
+        try {
+          const aiConfig = this.getAIConfig();
+          if (aiConfig) {
+            config.headers['x-ai-config'] = Buffer.from(JSON.stringify(aiConfig)).toString('base64');
+            console.log(`添加AI配置到请求头: ${aiConfig.provider}`);
+          }
+        } catch (error) {
+          console.warn('添加AI配置到请求头失败:', error);
+        }
+        
         return config;
       },
       (error) => {
@@ -176,6 +189,11 @@ class ApiService {
     analysisType: 'basic' | 'detailed' | 'full' = 'full'
   ): Promise<{ session: BookParseSession; analysisResults: ChapterAnalysisResult[]; bookSummary: BookSummary }> {
     try {
+      // 检查AI配置
+      if (!configService.isConfigValid()) {
+        throw new Error('请先配置AI模型');
+      }
+      
       const response = await this.client.post<ApiResponse<{ 
         session: BookParseSession; 
         analysisResults: ChapterAnalysisResult[]; 
@@ -201,6 +219,11 @@ class ApiService {
    */
   async generateBookSummary(fileId: string): Promise<{ session: BookParseSession; bookSummary: BookSummary }> {
     try {
+      // 检查AI配置
+      if (!configService.isConfigValid()) {
+        throw new Error('请先配置AI模型');
+      }
+      
       const response = await this.client.post<ApiResponse<{ session: BookParseSession; bookSummary: BookSummary }>>(
         `/api/books/${fileId}/generate-summary`
       );
@@ -357,6 +380,60 @@ class ApiService {
     // 返回停止轮询的函数
     return () => {
       isPolling = false;
+    };
+  }
+
+  /**
+   * 测试AI连接
+   */
+  async testAIConnection(config?: AIConfig): Promise<boolean> {
+    try {
+      const testConfig = config || configService.getCurrentConfig();
+      
+      if (!testConfig.apiKey) {
+        throw new Error('API密钥未配置');
+      }
+      
+      // 将重试延迟从分钟转换为毫秒传递给后端
+      const configForBackend = {
+        ...testConfig,
+        retryDelay: testConfig.retryDelay * 60 * 1000
+      };
+      
+      const response = await this.client.post<ApiResponse<{ connected: boolean }>>('/api/ai/test-connection', configForBackend);
+      
+      return response.data.success && response.data.data?.connected;
+    } catch (error) {
+      console.error('AI连接测试失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取当前AI配置
+   */
+  private getAIConfig(): AIConfig | null {
+    if (configService.isConfigValid()) {
+      const config = configService.getCurrentConfig();
+      // 将重试延迟从分钟转换为毫秒传递给后端
+      return {
+        ...config,
+        retryDelay: config.retryDelay * 60 * 1000
+      };
+    }
+    return null;
+  }
+
+  /**
+   * 获取AI配置状态
+   */
+  getAIConfigStatus(): { isConfigured: boolean; provider: string } {
+    const isConfigured = configService.isConfigValid();
+    const provider = configService.getCurrentProvider();
+    
+    return {
+      isConfigured,
+      provider
     };
   }
 

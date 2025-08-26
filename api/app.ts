@@ -7,8 +7,9 @@ import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import authRoutes from './routes/auth.js';
-import booksRoutes from './routes/books.js';
+import authRoutes from './routes/auth';
+import booksRoutes from './routes/books';
+import aiRoutes from './routes/ai';
 
 // for esm mode
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
  */
 app.use('/api/auth', authRoutes);
 app.use('/api/books', booksRoutes);
+app.use('/api/ai', aiRoutes);
 
 /**
  * health

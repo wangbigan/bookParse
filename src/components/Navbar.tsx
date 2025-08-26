@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Eye, Home, FileText, BarChart3, History } from 'lucide-react';
+import { BookOpen, Eye, Home, FileText, BarChart3, History, Settings, CheckCircle, AlertCircle } from 'lucide-react';
+import AIConfigModal from './AIConfigModal';
+import { configService } from '../services/configService';
 
 interface NavbarProps {
   progress?: number;
@@ -9,6 +11,25 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ progress = 0, historyCount = 0 }) => {
   const location = useLocation();
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [isAIConfigured, setIsAIConfigured] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState('deepseek');
+
+  // 检查AI配置状态
+  useEffect(() => {
+    const checkAIConfig = () => {
+      setIsAIConfigured(configService.isConfigValid());
+      setCurrentProvider(configService.getCurrentProvider());
+    };
+
+    checkAIConfig();
+
+    // 监听配置变更
+    const unsubscribe = configService.onConfigChange(checkAIConfig);
+    return unsubscribe;
+  }, []);
+
+
 
   const navItems = [
     { path: '/', label: '首页', icon: Home },
@@ -58,8 +79,24 @@ const Navbar: React.FC<NavbarProps> = ({ progress = 0, historyCount = 0 }) => {
             })}
           </div>
 
-          {/* 查看结果按钮和进度指示器 */}
+          {/* AI配置、查看结果按钮和进度指示器 */}
           <div className="flex items-center space-x-4">
+            {/* AI配置按钮 */}
+            <button
+              onClick={() => setShowConfigModal(true)}
+              className={`
+                flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                ${
+                  isAIConfigured
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                }
+              `}
+              title={isAIConfigured ? `已配置 ${currentProvider.toUpperCase()}` : '请配置AI模型'}
+            >
+              <Settings className="h-4 w-4" />
+              <span>{isAIConfigured ? '已配置AI' : '配置AI'}</span>
+            </button>
             {/* 进度指示器 */}
             {progress > 0 && (
               <div className="flex items-center space-x-2">
@@ -87,6 +124,16 @@ const Navbar: React.FC<NavbarProps> = ({ progress = 0, historyCount = 0 }) => {
           </div>
         </div>
       </div>
+      
+      {/* AI配置模态框 */}
+      <AIConfigModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        onConfigSaved={() => {
+          // 配置保存后的回调
+          console.log('AI配置已保存');
+        }}
+      />
     </nav>
   );
 };

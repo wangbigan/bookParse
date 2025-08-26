@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { config } from 'dotenv';
 import booksRouter from './routes/books';
+import aiRouter from './routes/ai';
 
 // 加载环境变量
 config();
@@ -25,6 +26,7 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // API路由
 app.use('/api/books', booksRouter);
+app.use('/api/ai', aiRouter);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

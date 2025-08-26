@@ -18,7 +18,8 @@ import { FileManager } from '../storage/file-manager';
 import { ParserFactory } from '../core/parsers/parser-factory';
 import { ChapterSplitter } from '../core/analyzers/chapter-splitter';
 import { DeepSeekProvider } from '../ai/deepseek-provider';
-import { BookParseSession, OperationLog, ParseResult } from '../types/book.types';
+import { UniversalAIProvider, AIConfig } from '../ai/universal-provider';
+import { BookParseSession, OperationLog, ParseResult, ChapterAnalysisResult, BookSummary } from '../types/book.types';
 
 const router = express.Router();
 
@@ -40,7 +41,30 @@ const upload = multer({
 // 初始化服务
 const fileManager = new FileManager();
 const parserFactory = new ParserFactory();
+// 创建DeepSeek提供者实例（向后兼容）
 const deepSeekProvider = new DeepSeekProvider();
+
+/**
+ * 从请求头中提取AI配置
+ */
+function extractAIConfig(req: express.Request): AIConfig | null {
+  return UniversalAIProvider.parseConfigFromHeaders(req.headers);
+}
+
+/**
+ * 获取AI提供者实例
+ */
+function getAIProvider(req: express.Request): UniversalAIProvider | DeepSeekProvider {
+  const aiConfig = extractAIConfig(req);
+  
+  if (aiConfig) {
+    console.log(`使用动态AI配置: ${aiConfig.provider}`);
+    return UniversalAIProvider.create(aiConfig);
+  } else {
+    console.log('使用默认DeepSeek配置');
+    return deepSeekProvider;
+  }
+}
 
 /**
  * POST /api/books/upload
@@ -305,6 +329,19 @@ router.post('/:fileId/analyze', async (req, res) => {
   try {
     const { fileId } = req.params;
     const { chapterIndexes, analysisType = 'full' } = req.body;
+    
+    // 获取AI配置
+    const aiConfig = extractAIConfig(req);
+    const aiProvider = getAIProvider(req);
+    
+    // 检查AI配置
+    if (aiConfig && aiProvider instanceof UniversalAIProvider && !aiProvider.isConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'AI配置不完整，请检查API密钥等配置信息'
+      });
+    }
+    
     const session = fileManager.getSession(fileId);
     
     if (!session || !session.parseResult?.chapters) {
@@ -327,7 +364,7 @@ router.post('/:fileId/analyze', async (req, res) => {
       timestamp: new Date(),
       operation: 'AI分析',
       status: 'in_progress',
-      message: '正在进行AI章节分析...'
+      message: `正在进行AI章节分析...${aiConfig ? ` - 使用: ${aiConfig.provider}` : ''}`
     });
 
     const chapters = session.parseResult.chapters;
@@ -345,12 +382,23 @@ router.post('/:fileId/analyze', async (req, res) => {
       : chapters;
 
     console.log(`[DEBUG] 实际分析章节数: ${targetChapters.length}`);
-
+    
     // 批量分析章节
-    const analysisResults = await deepSeekProvider.analyzeChaptersBatch(
-      targetChapters,
-      analysisType
-    );
+    let analysisResults;
+    if (aiProvider instanceof UniversalAIProvider) {
+      // 使用通用AI提供者
+      analysisResults = [];
+      for (const chapter of targetChapters) {
+        const result = await aiProvider.analyzeChapter(chapter, analysisType);
+        analysisResults.push(result);
+      }
+    } else {
+      // 使用DeepSeek提供者
+      analysisResults = await aiProvider.analyzeChaptersBatch(
+        targetChapters,
+        analysisType
+      );
+    }
     
     console.log(`[DEBUG] 分析结果数量: ${analysisResults.length}`);
     
@@ -408,7 +456,8 @@ router.post('/:fileId/analyze', async (req, res) => {
         analyzedChapters: analysisResults.length,
         totalArguments: analysisResults.reduce((sum, result) => sum + result.arguments.length, 0),
         totalQuotes: analysisResults.reduce((sum, result) => sum + result.quotes.length, 0),
-        requestedIndexes: chapterIndexes || 'all'
+        requestedIndexes: chapterIndexes || 'all',
+        aiProvider: aiConfig?.provider || 'deepseek'
       }
     });
 
