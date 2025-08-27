@@ -13,10 +13,13 @@
     "cover_alt_text": <封面图片替代文本>
   },
   "book_summary": {
-    "book_intro": <书籍简介，string类型>,
+    "book_intro": <书籍整体概述，300字左右，string类型>,
     "author_intro": <作者简介，string类型>,
+    "structure": <书籍结构分析,string类型>,
     "core_problem": <这本书作者想要解决的核心问题，string类型>,
-    "core_keywords": <关键词列表，作者在书中提出的或者引用的核心概念或者关键词；list类型>
+    "keyInsights": <作者在书中提出的核心洞察或独特观点，list类型>,
+    "core_keywords": <关键词列表，作者在书中提出的或者引用的核心概念或者关键词及其含义；dict类型>,
+    "tags": <给这本书贴10个最合适的标签，list类型>
   },
   "table_of_contents": <书籍完整目录结构，扁平化结构，通过父子关系关联>
   [{

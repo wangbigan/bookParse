@@ -684,9 +684,10 @@ router.post('/:fileId/generate-summary', async (req, res) => {
       bookSummary
     };
 
-    // 更新会话
+    // 更新会话状态为已完成，并保存解析结果
     await fileManager.updateSession(fileId, {
-      parseResult: updatedParseResult
+      parseResult: updatedParseResult,
+      status: 'completed'
     });
 
     // 添加成功日志

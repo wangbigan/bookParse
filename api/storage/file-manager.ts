@@ -33,8 +33,8 @@ export class FileManager {
       sessionDir: path.join(process.cwd(), 'sessions'),
       maxFileSize: 50 * 1024 * 1024, // 50MB
       allowedExtensions: ['.epub'],
-      cleanupInterval: 60 * 60 * 1000, // 1小时
-      maxAge: 24 * 60 * 60 * 1000, // 24小时
+      cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL || '3600000'), // 默认1小时（毫秒）
+      maxAge: parseInt(process.env.MAX_FILE_AGE || '86400000'), // 默认24小时（毫秒）
       ...config
     };
 

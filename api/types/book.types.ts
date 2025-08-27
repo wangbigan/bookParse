@@ -67,24 +67,26 @@ export interface ChapterAnalysisRawResponse {
   }[];
 }
 
-// 书籍总结
+// 书籍总结（匹配json_template.txt中的book_summary结构）
 export interface BookSummary {
-  overview: string;
-  mainThemes: string[];
-  keyInsights: string[];
-  structure: string;
-  writingStyle: string;
-  targetAudience: string;
-  strengths: string[];
-  weaknesses: string[];
-  recommendation: string;
-  rating: number;
-  tags: string[];
-  generatedDate: Date;
-  book_intro?: string;
-  author_intro?: string;
-  core_problem?: string;
-  core_keywords?: string[];
+  book_intro: string; // 书籍整体概述，300字左右
+  author_intro: string; // 作者简介
+  structure: string; // 书籍结构分析
+  core_problem: string; // 这本书作者想要解决的核心问题
+  keyInsights: string[]; // 作者在书中提出的核心洞察或独特观点，list类型
+  core_keywords: { [key: string]: string }; // 关键词列表，作者在书中提出的或者引用的核心概念或者关键词及其含义；dict类型
+  tags: string[]; // 给这本书贴10个最合适的标签，list类型
+  generatedDate: Date; // 生成日期
+  
+  // 保留原有字段以兼容现有代码
+  overview?: string;
+  mainThemes?: string[];
+  writingStyle?: string;
+  targetAudience?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendation?: string;
+  rating?: number;
 }
 
 // 解析结果

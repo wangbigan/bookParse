@@ -317,20 +317,27 @@ ${chapter.content}
 章节分析：
 ${chaptersInfo}
 
-请返回以下JSON格式的书籍总结：
+请返回以下JSON格式的书籍总结（严格按照json_template.txt中book_summary的结构）：
 {
-  "title": "${bookInfo.title}",
-  "author": "${bookInfo.author}",
-  "overallTheme": "<书籍整体主题，50-100字>",
-  "coreMessage": "<核心信息，100-200字>",
-  "keyInsights": ["洞察1", "洞察2", "洞察3"],
-  "practicalApplications": ["应用1", "应用2", "应用3"],
-  "targetAudience": "<目标读者群体>",
-  "readingValue": "<阅读价值评估>",
-  "recommendationReason": "<推荐理由>"
+  "book_intro": "书籍整体概述，300字左右，string类型",
+  "author_intro": "作者简介，string类型",
+  "structure": "书籍结构分析，string类型",
+  "core_problem": "这本书作者想要解决的核心问题，string类型",
+  "keyInsights": ["核心洞察1", "核心洞察2", "核心洞察3"],
+  "core_keywords": {
+    "关键词1": "含义解释1",
+    "关键词2": "含义解释2",
+    "关键词3": "含义解释3"
+  },
+  "tags": ["标签1", "标签2", "标签3", "标签4", "标签5", "标签6", "标签7", "标签8", "标签9", "标签10"]
 }
 
-注意：请确保返回有效的JSON格式，所有字符串值用双引号包围。
+注意：
+1. 请确保返回有效的JSON格式，所有字符串值用双引号包围
+2. keyInsights是作者在书中提出的核心洞察或独特观点的数组
+3. core_keywords是关键词字典，包含作者在书中提出的核心概念及其含义
+4. tags是给这本书贴的10个最合适的标签
+5. book_intro应该是300字左右的书籍整体概述
 `;
   }
 
@@ -513,38 +520,61 @@ ${chaptersInfo}
         throw new Error('响应中未找到有效的JSON格式');
       }
       
-      const parsed = JSON.parse(jsonMatch[0]);
+      let jsonString = jsonMatch[0];
+      // 清理JSON字符串
+      jsonString = this.cleanJsonString(jsonString);
       
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('标准JSON解析失败，尝试备用解析策略:', parseError.message);
+        parsed = this.fallbackJsonParse(jsonString);
+      }
+      
+      // 按照新的book_summary结构解析
       return {
-        overview: parsed.coreMessage || '无核心信息',
+        book_intro: parsed.book_intro || '无书籍概述',
+        author_intro: parsed.author_intro || '无作者简介',
+        structure: parsed.structure || '未分析书籍结构',
+        core_problem: parsed.core_problem || '未识别核心问题',
+        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        core_keywords: (typeof parsed.core_keywords === 'object' && parsed.core_keywords !== null) ? parsed.core_keywords : {},
+        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+        generatedDate: new Date(),
+        
+        // 保留原有字段以兼容现有代码
+        overview: parsed.book_intro || parsed.coreMessage || '无核心信息',
         mainThemes: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
-        keyInsights: Array.isArray(parsed.practicalApplications) ? parsed.practicalApplications : [],
-        structure: '未分析',
         writingStyle: '未分析',
         targetAudience: parsed.targetAudience || '未知',
         strengths: [],
         weaknesses: [],
         recommendation: parsed.recommendationReason || '无推荐理由',
-        rating: 0,
-        tags: [],
-        generatedDate: new Date()
+        rating: 0
       };
     } catch (error) {
       console.error('解析书籍总结响应失败:', error);
       
       return {
+        book_intro: '解析失败，无法生成书籍概述',
+        author_intro: '解析失败，无法生成作者简介',
+        structure: '解析失败，无法分析书籍结构',
+        core_problem: '解析失败，无法识别核心问题',
+        keyInsights: [],
+        core_keywords: {},
+        tags: [],
+        generatedDate: new Date(),
+        
+        // 保留原有字段以兼容现有代码
         overview: '解析失败，无法生成核心信息',
         mainThemes: [],
-        keyInsights: [],
-        structure: '未分析',
         writingStyle: '未分析',
         targetAudience: '未知',
         strengths: [],
         weaknesses: [],
         recommendation: '解析失败',
-        rating: 0,
-        tags: [],
-        generatedDate: new Date()
+        rating: 0
       };
     }
   }

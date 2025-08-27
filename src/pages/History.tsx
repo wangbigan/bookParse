@@ -294,7 +294,11 @@ const History: React.FC<HistoryProps> = ({ onHistoryUpdate }) => {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
                           <span>📝 {record.author || '未知作者'}</span>
-                          <span>📁 {record.filename}</span>
+                          {/* 当有书名时只显示文件扩展名，避免重复显示书名 */}
+                          <span>📁 {record.bookTitle ? 
+                            record.filename.split('.').pop()?.toUpperCase() || 'EPUB' : 
+                            record.filename
+                          }</span>
                           <span>💾 {formatFileSize(record.fileSize)}</span>
                           <span className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />

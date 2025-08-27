@@ -182,12 +182,11 @@ ${chapter.content}
 }
 
 注意事项：
-1. 必须返回有效的JSON格式
+1. 必须返回有效的JSON格式，json字段值内容如有双引号，需要用反斜杠转义
 2. chapter_keywords应包含作者在本章中提出或引用的重要概念
-3. arguments包含作者针对本章核心观点提出的主要论据
+3. arguments包含作者针对本章核心观点提出的主要论据、案例以及引用
 4. positive_case和negative_case可以为空数组，但必须存在
 5. citations如果没有外部引用可以为空数组
-6. 所有字符串值都要用双引号包围
 7. 不要在JSON中使用注释或其他非标准格式
 `;
 
@@ -208,7 +207,7 @@ ${chapter.content}
     chapterAnalysis: ChapterAnalysisResult[]
   ): string {
     const analysisOverview = chapterAnalysis.map(analysis => 
-      `章节：${analysis.chapterTitle}\n摘要：${analysis.summary}\n主题：${analysis.themes.join(', ')}`
+      `章节：${analysis.chapterTitle}\n摘要：${analysis.summary}`
     ).join('\n\n');
 
     return `
@@ -223,20 +222,27 @@ ${chapter.content}
 章节分析概览：
 ${analysisOverview}
 
-请以JSON格式返回书籍总结：
+请以JSON格式返回书籍总结（严格按照json_template.txt中book_summary的结构）：
 {
-  "overview": "书籍整体概述（300字以内）",
-  "mainThemes": ["主要主题1", "主要主题2", "主要主题3"],
+  "book_intro": "书籍整体概述，300字左右，string类型",
+  "author_intro": "作者简介，string类型",
+  "structure": "书籍结构分析，string类型",
+  "core_problem": "这本书作者想要解决的核心问题，string类型",
   "keyInsights": ["核心洞察1", "核心洞察2", "核心洞察3"],
-  "structure": "书籍结构分析",
-  "writingStyle": "写作风格描述",
-  "targetAudience": "目标读者群体",
-  "strengths": ["优点1", "优点2"],
-  "weaknesses": ["不足1", "不足2"],
-  "recommendation": "推荐理由和建议",
-  "rating": 8.5,
-  "tags": ["标签1", "标签2", "标签3"]
+  "core_keywords": {
+    "关键词1": "含义解释1",
+    "关键词2": "含义解释2",
+    "关键词3": "含义解释3"
+  },
+  "tags": ["标签1", "标签2", "标签3", "标签4", "标签5", "标签6", "标签7", "标签8", "标签9", "标签10"]
 }
+
+注意事项：
+1. 必须返回有效的JSON格式，json字段值内容如有双引号，需要用反斜杠转义
+2. keyInsights是作者在书中提出的核心洞察或独特观点的数组
+3. core_keywords是关键词字典，包含作者在书中提出的核心概念及其含义
+4. tags是给这本书贴的10个最合适的标签
+5. book_intro应该是300字左右的书籍整体概述
 `;
   }
 
@@ -516,18 +522,25 @@ ${analysisOverview}
       console.log('解析结果字段:', Object.keys(parsed));
       
       const bookSummary = {
-        overview: parsed.overview || '无概述',
-        mainThemes: Array.isArray(parsed.mainThemes) ? parsed.mainThemes : [],
-        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        // 新的book_summary结构字段
+        book_intro: parsed.book_intro || parsed.overview || '无书籍概述',
+        author_intro: parsed.author_intro || '无作者简介',
         structure: parsed.structure || '无结构分析',
+        core_problem: parsed.core_problem || '无核心问题',
+        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        core_keywords: (typeof parsed.core_keywords === 'object' && parsed.core_keywords !== null) ? parsed.core_keywords : {},
+        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+        generatedDate: new Date(),
+        
+        // 保留原有字段以兼容现有代码
+        overview: parsed.book_intro || parsed.overview || '无概述',
+        mainThemes: Array.isArray(parsed.mainThemes) ? parsed.mainThemes : [],
         writingStyle: parsed.writingStyle || '无风格描述',
         targetAudience: parsed.targetAudience || '无目标读者描述',
         strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
         weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
         recommendation: parsed.recommendation || '无推荐',
-        rating: typeof parsed.rating === 'number' ? parsed.rating : 0,
-        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-        generatedDate: new Date()
+        rating: typeof parsed.rating === 'number' ? parsed.rating : 0
       };
       
       console.log('书籍总结解析完成，主题数量:', bookSummary.mainThemes.length);
@@ -540,18 +553,25 @@ ${analysisOverview}
       
       // 返回默认的书籍总结结构
       return {
+        // 新的book_summary结构字段
+        book_intro: '总结生成失败: ' + error.message,
+        author_intro: '无作者简介',
+        structure: '无结构分析',
+        core_problem: '无核心问题',
+        keyInsights: [],
+        core_keywords: {},
+        tags: [],
+        generatedDate: new Date(),
+        
+        // 保留原有字段以兼容现有代码
         overview: '总结生成失败: ' + error.message,
         mainThemes: [],
-        keyInsights: [],
-        structure: '无',
         writingStyle: '无',
         targetAudience: '无',
         strengths: [],
         weaknesses: [],
         recommendation: '无',
-        rating: 0,
-        tags: [],
-        generatedDate: new Date()
+        rating: 0
       };
     }
   }

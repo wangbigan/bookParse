@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Brain, BookOpen, Download, Copy, Play, CheckCircle, Clock, Tag, RotateCcw, Zap } from 'lucide-react';
+import { Brain, BookOpen, Download, Copy, Play, CheckCircle, Clock, Tag, RotateCcw, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import apiService from '../services/api';
 import { BookParseSession, ChapterAnalysisResult, BookSummary, ArgumentInfo } from '../types/book';
 import { historyManager } from '../utils/historyManager';
@@ -59,20 +59,28 @@ const AnalysisReport: React.FC = () => {
   const [tableOfContents, setTableOfContents] = useState<any[]>([]);
 
   const [bookSummary, setBookSummary] = useState<LocalBookSummary>({
+    book_intro: '',
+    author_intro: '',
+    structure: '',
+    core_problem: '',
+    keyInsights: [],
+    core_keywords: {},
+    tags: [],
+    generatedDate: new Date(),
+    generated: false,
+    // 保留原有字段的默认值以兼容现有代码
     overview: '',
     mainThemes: [],
-    keyInsights: [],
-    structure: '',
     writingStyle: '',
     targetAudience: '',
     strengths: [],
     weaknesses: [],
     recommendation: '',
-    rating: 0,
-    tags: [],
-    generatedDate: new Date(),
-    generated: false
+    rating: 0
   });
+  
+  // JSON展开/收缩状态
+  const [isJsonExpanded, setIsJsonExpanded] = useState(false);
 
   /**
    * 从API获取会话数据和章节数据
@@ -109,6 +117,16 @@ const AnalysisReport: React.FC = () => {
           if (sessionData.parseResult.tableOfContents) {
             setTableOfContents(sessionData.parseResult.tableOfContents);
             console.log('[DEBUG] 从后端恢复目录信息，条目数:', sessionData.parseResult.tableOfContents.length);
+          }
+          
+          // 恢复书籍总结数据
+          if (sessionData.parseResult.bookSummary) {
+            const restoredSummary = {
+              ...sessionData.parseResult.bookSummary,
+              generated: true // 标记为已生成
+            };
+            setBookSummary(restoredSummary);
+            console.log('[DEBUG] 从后端恢复书籍总结信息:', restoredSummary);
           }
         }
         
@@ -172,19 +190,24 @@ const AnalysisReport: React.FC = () => {
     
     // 重置书籍总结状态
     setBookSummary({
+      book_intro: '',
+      author_intro: '',
+      structure: '',
+      core_problem: '',
+      keyInsights: [],
+      core_keywords: {},
+      tags: [],
+      generatedDate: new Date(),
+      generated: false,
+      // 保留原有字段的默认值以兼容现有代码
       overview: '',
       mainThemes: [],
-      keyInsights: [],
-      structure: '',
       writingStyle: '',
       targetAudience: '',
       strengths: [],
       weaknesses: [],
       recommendation: '',
-      rating: 0,
-      tags: [],
-      generatedDate: new Date(),
-      generated: false
+      rating: 0
     });
     
     // 清除错误状态和分析状态
@@ -442,10 +465,21 @@ const AnalysisReport: React.FC = () => {
    * @returns 包含完整解析和分析结果的JSON对象
    */
   const generateFinalJSON = () => {
+    // 构建符合json_template.txt结构的book_summary
+    const formattedBookSummary = bookSummary.generated ? {
+      book_intro: bookSummary.book_intro || bookSummary.overview || '',
+      author_intro: bookSummary.author_intro || '',
+      structure: bookSummary.structure || '',
+      core_problem: bookSummary.core_problem || '',
+      keyInsights: bookSummary.keyInsights || [],
+      core_keywords: bookSummary.core_keywords || {},
+      tags: bookSummary.tags || []
+    } : null;
+
     return {
       book_info: bookInfo,
       cover_info: coverInfo,
-      book_summary: bookSummary.generated ? bookSummary : null,
+      book_summary: formattedBookSummary,
       table_of_contents: tableOfContents,
       chapters: chapters
     };
@@ -457,13 +491,38 @@ const AnalysisReport: React.FC = () => {
     alert('JSON数据已复制到剪贴板！');
   };
 
+  /**
+   * 处理下载JSON文件
+   * 根据书籍标题生成文件名
+   */
   const handleDownloadJSON = () => {
     const jsonData = JSON.stringify(generateFinalJSON(), null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'book_analysis_result.json';
+    
+    // 生成基于书籍标题的文件名
+    let fileName = 'book_analysis_result.json'; // 默认文件名
+    
+    // 尝试从多个来源获取书籍标题
+    const bookTitle = bookInfo?.title || 
+                     bookInfo?.bookTitle || 
+                     session?.parseResult?.bookInfo?.title
+    
+    if (bookTitle) {
+      // 清理标题中的特殊字符，确保文件名合法
+      const cleanTitle = bookTitle
+        .replace(/[\\/:*?"<>|]/g, '') // 移除Windows不允许的字符
+        .replace(/[\s]+/g, '_') // 将空格替换为下划线
+        .trim();
+      
+      if (cleanTitle) {
+        fileName = `${cleanTitle}_分析报告.json`;
+      }
+    }
+    
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -796,48 +855,82 @@ const AnalysisReport: React.FC = () => {
 
             {bookSummary.generated ? (
               <div className="space-y-4">
+                {/* 书籍整体概述 */}
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h3 className="font-medium text-green-900 mb-2">书籍概述</h3>
-                  <p className="text-sm text-green-800">{bookSummary.overview}</p>
+                  <h3 className="font-medium text-green-900 mb-2">书籍整体概述</h3>
+                  <p className="text-sm text-green-800">{bookSummary.book_intro || bookSummary.overview || '暂无概述'}</p>
                 </div>
                 
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">主要主题</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {bookSummary.mainThemes.map((theme, index) => (
-                      <span
-                        key={`theme-${index}`}
-                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                      >
-                        {theme}
-                      </span>
-                    ))}
+                {/* 作者简介 */}
+                {bookSummary.author_intro && (
+                  <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <h3 className="font-medium text-indigo-900 mb-2">作者简介</h3>
+                    <p className="text-sm text-indigo-800">{bookSummary.author_intro}</p>
                   </div>
-                </div>
+                )}
                 
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <h3 className="font-medium text-purple-900 mb-2">关键洞察</h3>
-                  <div className="space-y-2">
-                    {bookSummary.keyInsights.map((insight, index) => (
-                      <p key={`insight-${index}`} className="text-sm text-purple-800">• {insight}</p>
-                    ))}
+                {/* 书籍结构分析 */}
+                {bookSummary.structure && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="font-medium text-blue-900 mb-2">书籍结构分析</h3>
+                    <p className="text-sm text-blue-800">{bookSummary.structure}</p>
                   </div>
-                </div>
+                )}
                 
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h3 className="font-medium text-yellow-900 mb-2">推荐理由</h3>
-                  <p className="text-sm text-yellow-800">{bookSummary.recommendation}</p>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-sm text-yellow-700">评分:</span>
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={`star-${i}`} className={`text-lg ${i < bookSummary.rating ? 'text-yellow-500' : 'text-gray-300'}`}>
-                          ★
+                {/* 核心问题 */}
+                {bookSummary.core_problem && (
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <h3 className="font-medium text-orange-900 mb-2">核心问题</h3>
+                    <p className="text-sm text-orange-800">{bookSummary.core_problem}</p>
+                  </div>
+                )}
+                
+                {/* 核心洞察 */}
+                {bookSummary.keyInsights && bookSummary.keyInsights.length > 0 && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h3 className="font-medium text-purple-900 mb-2">核心洞察</h3>
+                    <div className="space-y-2">
+                      {bookSummary.keyInsights.map((insight, index) => (
+                        <p key={`insight-${index}`} className="text-sm text-purple-800">• {insight}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* 核心关键词 */}
+                {bookSummary.core_keywords && Object.keys(bookSummary.core_keywords).length > 0 && (
+                  <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                    <h3 className="font-medium text-cyan-900 mb-2">核心关键词</h3>
+                    <div className="space-y-2">
+                      {Object.entries(bookSummary.core_keywords).map(([keyword, meaning], index) => (
+                        <div key={`keyword-${index}`} className="text-sm">
+                          <span className="font-medium text-cyan-900">{keyword}:</span>
+                          <span className="text-cyan-800 ml-2">{meaning}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* 标签 */}
+                {bookSummary.tags && bookSummary.tags.length > 0 && (
+                  <div className="p-4 bg-pink-50 border border-pink-200 rounded-lg">
+                    <h3 className="font-medium text-pink-900 mb-2">书籍标签</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {bookSummary.tags.map((tag, index) => (
+                        <span
+                          key={`tag-${index}`}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-pink-100 text-pink-800"
+                        >
+                          <Tag className="h-3 w-3 mr-1" />
+                          {tag}
                         </span>
                       ))}
                     </div>
                   </div>
-                </div>
+                )}
+                
+
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
@@ -856,10 +949,34 @@ const AnalysisReport: React.FC = () => {
 
             <div className="space-y-4">
               {/* JSON预览 */}
-              <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                <pre className="text-green-400 text-sm">
-                  <code>{JSON.stringify(generateFinalJSON(), null, 2)}</code>
-                </pre>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setIsJsonExpanded(!isJsonExpanded)}
+                  className="
+                    flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg
+                    hover:bg-gray-200 transition-colors border border-gray-300
+                  "
+                >
+                  {isJsonExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      <span>收缩JSON</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      <span>展开JSON</span>
+                    </>
+                  )}
+                </button>
+                
+                {isJsonExpanded && (
+                  <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                    <pre className="text-green-400 text-sm">
+                      <code>{JSON.stringify(generateFinalJSON(), null, 2)}</code>
+                    </pre>
+                  </div>
+                )}
               </div>
 
               {/* 导出按钮 */}
