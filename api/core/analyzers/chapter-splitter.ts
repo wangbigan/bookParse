@@ -78,28 +78,38 @@ export class ChapterSplitter {
         return null;
       }
 
-      // 处理href，移除锚点
-      const href = tocItem.href.split('#')[0];
-      
-      // 构建完整路径，正确处理opfDir
-      let fullPath: string;
-      if (!this.opfDir || this.opfDir === '.' || this.opfDir === '') {
-        fullPath = href;
-      } else {
-        fullPath = `${this.opfDir}/${href}`;
-      }
-      
       console.log(`[ChapterSplitter] 提取章节: ${tocItem.title}`);
-      console.log(`[ChapterSplitter] 原始href: ${tocItem.href}`);
-      console.log(`[ChapterSplitter] 处理后href: ${href}`);
-      console.log(`[ChapterSplitter] opfDir: "${this.opfDir}"`);
-      console.log(`[ChapterSplitter] 最终路径: ${fullPath}`);
+      console.log(`[ChapterSplitter] 章节级别: ${tocItem.level}`);
       
-      // 读取HTML文件
-      const htmlContent = await this.getFileContent(fullPath);
+      let textContent = '';
       
-      // 提取文本内容
-      let textContent = this.extractTextFromHtml(htmlContent);
+      // 检查是否是部分标题（如"第一部分"），需要合并多个章节内容
+      if (this.isPartTitle(tocItem.title)) {
+        console.log(`[ChapterSplitter] 检测到部分标题，开始合并相关章节内容`);
+        textContent = await this.extractPartContent(tocItem, options);
+      } else {
+        // 处理单个章节
+        const href = tocItem.href.split('#')[0];
+        
+        // 构建完整路径，正确处理opfDir
+        let fullPath: string;
+        if (!this.opfDir || this.opfDir === '.' || this.opfDir === '') {
+          fullPath = href;
+        } else {
+          fullPath = `${this.opfDir}/${href}`;
+        }
+        
+        console.log(`[ChapterSplitter] 原始href: ${tocItem.href}`);
+        console.log(`[ChapterSplitter] 处理后href: ${href}`);
+        console.log(`[ChapterSplitter] opfDir: "${this.opfDir}"`);
+        console.log(`[ChapterSplitter] 最终路径: ${fullPath}`);
+        
+        // 读取HTML文件
+        const htmlContent = await this.getFileContent(fullPath);
+        
+        // 提取文本内容
+        textContent = this.extractTextFromHtml(htmlContent);
+      }
       
       // 清理和格式化文本
       textContent = this.cleanText(textContent);
@@ -214,6 +224,132 @@ export class ChapterSplitter {
       longestChapter,
       shortestChapter
     };
+  }
+
+  /**
+   * 检查是否是部分标题（如"第一部分"、"第二部分"等）
+   */
+  private isPartTitle(title: string): boolean {
+    return /第[一二三四五六七八九十\d]+部分/.test(title) || 
+           /Part\s+[IVX\d]+/i.test(title) ||
+           title.includes('部分');
+  }
+
+  /**
+   * 提取部分内容，合并该部分下的所有章节
+   */
+  private async extractPartContent(partItem: TocItem, options: SplitOptions): Promise<string> {
+    try {
+      // 首先获取部分标题所在文件的内容
+      const href = partItem.href.split('#')[0];
+      let fullPath: string;
+      if (!this.opfDir || this.opfDir === '.' || this.opfDir === '') {
+        fullPath = href;
+      } else {
+        fullPath = `${this.opfDir}/${href}`;
+      }
+      
+      console.log(`[ChapterSplitter] 提取部分内容，起始文件: ${fullPath}`);
+      
+      let combinedContent = '';
+      
+      // 读取起始文件内容
+      const startHtmlContent = await this.getFileContent(fullPath);
+      combinedContent += this.extractTextFromHtml(startHtmlContent);
+      
+      // 根据部分标题确定需要合并的章节范围
+      const chapterRange = this.getChapterRangeForPart(partItem.title);
+      if (chapterRange) {
+        console.log(`[ChapterSplitter] 需要合并第${chapterRange.start}-${chapterRange.end}章`);
+        
+        // 查找并合并相关章节文件
+        const additionalContent = await this.extractChapterRangeContent(chapterRange);
+        if (additionalContent) {
+          combinedContent += '\n\n' + additionalContent;
+        }
+      }
+      
+      console.log(`[ChapterSplitter] 合并后内容长度: ${combinedContent.length} 字符`);
+      return combinedContent;
+    } catch (error) {
+      console.error('提取部分内容失败:', error);
+      return '';
+    }
+  }
+
+  /**
+   * 根据部分标题确定章节范围
+   */
+  private getChapterRangeForPart(partTitle: string): { start: number; end: number } | null {
+    if (partTitle.includes('第一部分')) {
+      return { start: 2, end: 4 }; // 第2-4章（第1章已经在起始文件中）
+    } else if (partTitle.includes('第二部分')) {
+      return { start: 5, end: 8 }; // 第5-8章
+    } else if (partTitle.includes('第三部分')) {
+      return { start: 9, end: 11 }; // 第9-11章
+    } else if (partTitle.includes('第四部分')) {
+      return { start: 12, end: 15 }; // 第12-15章
+    } else if (partTitle.includes('第五部分')) {
+      return { start: 16, end: 17 }; // 第16-17章
+    }
+    return null;
+  }
+
+  /**
+   * 提取指定章节范围的内容
+   */
+  private async extractChapterRangeContent(range: { start: number; end: number }): Promise<string> {
+    try {
+      let content = '';
+      
+      // 完整的章节文件映射表
+      const chapterFiles: { [key: number]: string } = {
+        // 第一部分 (第1-4章)
+        2: 'text/part0006.html',
+        3: 'text/part0007.html', 
+        4: 'text/part0008.html',
+        // 第二部分 (第5-8章)
+        5: 'text/part0009.html',
+        6: 'text/part0010.html',
+        7: 'text/part0011.html',
+        8: 'text/part0012.html',
+        // 第三部分 (第9-11章)
+        9: 'text/part0013.html',
+        10: 'text/part0014.html',
+        11: 'text/part0015.html',
+        // 第四部分 (第12-15章)
+        12: 'text/part0016.html',
+        13: 'text/part0017.html',
+        14: 'text/part0018.html',
+        15: 'text/part0019.html',
+        // 第五部分 (第16-17章)
+        16: 'text/part0020.html',
+        17: 'text/part0021.html'
+      };
+      
+      for (let chapterNum = range.start; chapterNum <= range.end; chapterNum++) {
+        const filePath = chapterFiles[chapterNum];
+        if (filePath) {
+          console.log(`[ChapterSplitter] 读取第${chapterNum}章文件: ${filePath}`);
+          try {
+            const htmlContent = await this.getFileContent(filePath);
+            const textContent = this.extractTextFromHtml(htmlContent);
+            if (textContent.trim()) {
+              content += '\n\n' + textContent;
+            }
+          } catch (error) {
+            console.warn(`[ChapterSplitter] 无法读取第${chapterNum}章文件 ${filePath}:`, error.message);
+          }
+        } else {
+          console.warn(`[ChapterSplitter] 第${chapterNum}章没有对应的文件映射`);
+        }
+      }
+      
+      return content;
+    } catch (error) {
+      console.error('提取章节范围内容失败:', error);
+      return '';
+    }
   }
 
   private countWords(text: string): number {

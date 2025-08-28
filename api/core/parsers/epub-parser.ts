@@ -469,11 +469,111 @@ export class EPUBParser extends BaseParser {
 
     try {
       console.log('开始提取目录结构...');
-      // 查找NCX文件
       const manifest = opfData.package.manifest[0].item;
+      
+      // 方法1: 查找nav.xhtml文件（EPUB3标准）
+      console.log('方法1: 查找nav.xhtml导航文件...');
+      const navTocItems = await this.extractTocFromNavFile(zip, manifest, opfDir);
+      if (navTocItems.length > 0) {
+        console.log(`从nav.xhtml文件提取到 ${navTocItems.length} 个目录项`);
+        return navTocItems;
+      }
+      
+      // 方法2: 查找NCX文件（EPUB2标准）
+      console.log('方法2: 查找NCX文件...');
+      const ncxTocItems = await this.extractTocFromNcxFile(zip, manifest, opfDir);
+      if (ncxTocItems.length > 0) {
+        console.log(`从NCX文件提取到 ${ncxTocItems.length} 个目录项`);
+        return ncxTocItems;
+      }
+      
+      // 方法3: 从HTML/XHTML文件中提取div结构目录
+      console.log('方法3: 从HTML/XHTML文件提取目录...');
+      const htmlTocItems = await this.extractTocFromHtmlFiles(zip, manifest, opfDir);
+      if (htmlTocItems.length > 0) {
+        console.log(`从HTML文件提取到 ${htmlTocItems.length} 个目录项`);
+        return htmlTocItems;
+      }
+      
+      // 方法4: 使用spine提取目录（最后的备用方案）
+      console.log('方法4: 使用spine提取目录...');
+      return this.extractTocFromSpine(opfData);
+    } catch (error) {
+      console.error('目录提取错误:', error);
+      console.log('回退到spine提取目录');
+      return this.extractTocFromSpine(opfData);
+    }
+  }
+
+  /**
+   * 从nav.xhtml文件提取目录结构
+   * @param zip EPUB文件的ZIP对象
+   * @param manifest 清单项目列表
+   * @param opfDir OPF文件所在目录
+   * @returns 目录项数组
+   */
+  private async extractTocFromNavFile(zip: JSZip, manifest: any[], opfDir: string): Promise<TocItem[]> {
+    try {
+      // 查找nav文件
+      let navPath = '';
+      for (const item of manifest) {
+        const properties = item.$?.properties || '';
+        const href = item.$?.href || '';
+        if (properties.includes('nav') || href.toLowerCase().includes('nav.xhtml')) {
+          navPath = href;
+          console.log(`找到导航文件: ${navPath}`);
+          break;
+        }
+      }
+      
+      if (!navPath) {
+        console.log('未找到nav.xhtml文件');
+        return [];
+      }
+      
+      // 尝试多种路径策略读取nav文件
+      const pathsToTry = [
+        navPath,
+        opfDir && opfDir !== '.' ? `${opfDir}/${navPath}` : navPath
+      ];
+      
+      let navFile = null;
+      for (const path of pathsToTry) {
+        navFile = zip.file(path);
+        if (navFile) {
+          console.log(`成功找到nav文件: ${path}`);
+          break;
+        }
+      }
+      
+      if (!navFile) {
+        console.log(`无法读取nav文件: ${pathsToTry.join(', ')}`);
+        return [];
+      }
+      
+      const navContent = await navFile.async('text');
+      
+      // 解析nav.xhtml中的目录结构
+      const tocItems = this.parseNavXhtmlContent(navContent);
+      return tocItems;
+    } catch (error) {
+      console.error('从nav文件提取目录失败:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * 从NCX文件提取目录结构
+   * @param zip EPUB文件的ZIP对象
+   * @param manifest 清单项目列表
+   * @param opfDir OPF文件所在目录
+   * @returns 目录项数组
+   */
+  private async extractTocFromNcxFile(zip: JSZip, manifest: any[], opfDir: string): Promise<TocItem[]> {
+    try {
       let ncxPath = '';
       
-      console.log('方法1: 在清单中查找NCX文件...');
+      // 在清单中查找NCX文件
       for (const item of manifest) {
         if (item.$?.['media-type'] === 'application/x-dtbncx+xml') {
           ncxPath = item.$?.href;
@@ -481,19 +581,17 @@ export class EPUBParser extends BaseParser {
           break;
         }
       }
-
+      
       if (!ncxPath) {
-        console.log('方法2: 查找常见的NCX文件名...');
-        // 尝试查找toc.ncx
+        // 尝试查找常见的NCX文件名
         const commonNcxPaths = [
-          opfDir ? `${opfDir}/toc.ncx` : 'toc.ncx',
           'toc.ncx',
+          opfDir ? `${opfDir}/toc.ncx` : 'toc.ncx',
           'OEBPS/toc.ncx',
           'content/toc.ncx'
         ];
         
         for (const path of commonNcxPaths) {
-          console.log(`检查NCX文件: ${path}`);
           if (zip.file(path)) {
             ncxPath = path;
             console.log(`找到NCX文件: ${ncxPath}`);
@@ -501,29 +599,189 @@ export class EPUBParser extends BaseParser {
           }
         }
       }
-
+      
       if (!ncxPath) {
-        console.log('未找到NCX文件，使用spine提取目录');
-        return this.extractTocFromSpine(opfData);
+        console.log('未找到NCX文件');
+        return [];
       }
-
-      // 解析NCX文件
-      console.log(`解析NCX文件: ${ncxPath}`);
-      const ncxContent = await this.getFileContent(zip, ncxPath);
+      
+      // 尝试多种路径策略读取NCX文件
+      const pathsToTry = [
+        ncxPath,
+        opfDir && opfDir !== '.' ? `${opfDir}/${ncxPath}` : ncxPath
+      ];
+      
+      let ncxFile = null;
+      for (const path of pathsToTry) {
+        ncxFile = zip.file(path);
+        if (ncxFile) {
+          console.log(`成功找到NCX文件: ${path}`);
+          break;
+        }
+      }
+      
+      if (!ncxFile) {
+        console.log(`无法读取NCX文件: ${pathsToTry.join(', ')}`);
+        return [];
+      }
+      
+      const ncxContent = await ncxFile.async('text');
       const ncxData = await parseStringPromise(ncxContent);
       
       if (!ncxData.ncx?.navMap?.[0]?.navPoint) {
-        console.log('NCX文件格式无效，使用spine提取目录');
-        return this.extractTocFromSpine(opfData);
+        console.log('NCX文件格式无效');
+        return [];
       }
       
       const tocItems = this.parseNcxNavMap(ncxData.ncx.navMap[0].navPoint);
-      console.log(`从NCX文件提取到 ${tocItems.length} 个目录项`);
       return tocItems;
     } catch (error) {
-      console.error('目录提取错误:', error);
-      console.log('回退到spine提取目录');
-      return this.extractTocFromSpine(opfData);
+      console.error('从NCX文件提取目录失败:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * 从HTML/XHTML文件中提取div结构目录
+   * @param zip EPUB文件的ZIP对象
+   * @param manifest 清单项目列表
+   * @param opfDir OPF文件所在目录
+   * @returns 目录项数组
+   */
+  private async extractTocFromHtmlFiles(zip: JSZip, manifest: any[], opfDir: string): Promise<TocItem[]> {
+    try {
+      const tocItems: TocItem[] = [];
+      
+      // 查找可能包含目录的HTML/XHTML文件
+      for (const item of manifest) {
+        const href = item.$?.href || '';
+        const mediaType = item.$?.['media-type'] || '';
+        
+        if (mediaType.includes('html') || 
+            href.toLowerCase().includes('toc') || 
+            href.toLowerCase().includes('contents') || 
+            href.toLowerCase().includes('index')) {
+          
+          const pathsToTry = [
+            href,
+            opfDir && opfDir !== '.' ? `${opfDir}/${href}` : href
+          ];
+          
+          let htmlFile = null;
+          for (const path of pathsToTry) {
+            htmlFile = zip.file(path);
+            if (htmlFile) break;
+          }
+          
+          if (htmlFile) {
+            const htmlContent = await htmlFile.async('text');
+            const extractedItems = this.parseHtmlTocContent(htmlContent);
+            if (extractedItems.length > 0) {
+              console.log(`从 ${href} 提取到 ${extractedItems.length} 个目录项`);
+              tocItems.push(...extractedItems);
+              break; // 找到一个有效的目录文件就停止
+            }
+          }
+        }
+      }
+      
+      return tocItems;
+    } catch (error) {
+      console.error('从HTML文件提取目录失败:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * 解析nav.xhtml文件内容
+   * @param navContent nav.xhtml文件内容
+   * @returns 目录项数组
+   */
+  private parseNavXhtmlContent(navContent: string): TocItem[] {
+    try {
+      const tocItems: TocItem[] = [];
+      
+      // 使用正则表达式提取<li><a>结构
+      const liPattern = /<li[^>]*>\s*<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>\s*<\/li>/gi;
+      let match;
+      let index = 1;
+      
+      while ((match = liPattern.exec(navContent)) !== null) {
+        const href = match[1];
+        const title = match[2].trim();
+        
+        if (title && href) {
+          tocItems.push({
+            id: uuidv4(),
+            title,
+            level: 1,
+            href,
+            parent_id: null
+          });
+        }
+        index++;
+      }
+      
+      console.log(`从nav.xhtml解析到 ${tocItems.length} 个目录项`);
+      return tocItems;
+    } catch (error) {
+      console.error('解析nav.xhtml内容失败:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * 解析HTML文件中的目录内容
+   * @param htmlContent HTML文件内容
+   * @returns 目录项数组
+   */
+  private parseHtmlTocContent(htmlContent: string): TocItem[] {
+    try {
+      const tocItems: TocItem[] = [];
+      
+      // 检查是否包含目录相关的内容
+      const tocKeywords = ['目录', 'contents', 'toc', '章', 'chapter', '第.*章', '第.*节'];
+      const hasTableOfContents = tocKeywords.some(keyword => 
+        htmlContent.toLowerCase().includes(keyword.toLowerCase()) ||
+        new RegExp(keyword, 'i').test(htmlContent)
+      );
+      
+      if (!hasTableOfContents) {
+        return [];
+      }
+      
+      // 提取div中的链接结构
+      const divPattern = /<div[^>]*>([\s\S]*?)<\/div>/gi;
+      const linkPattern = /<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
+      
+      let divMatch;
+      while ((divMatch = divPattern.exec(htmlContent)) !== null) {
+        const divContent = divMatch[1];
+        let linkMatch;
+        
+        while ((linkMatch = linkPattern.exec(divContent)) !== null) {
+          const href = linkMatch[1];
+          const title = linkMatch[2].trim();
+          
+          // 过滤掉明显不是章节的链接
+          if (title && href && 
+              (title.includes('章') || title.includes('Chapter') || 
+               title.includes('第') || /\d+/.test(title))) {
+            tocItems.push({
+              id: uuidv4(),
+              title,
+              level: 1,
+              href,
+              parent_id: null
+            });
+          }
+        }
+      }
+      
+      return tocItems;
+    } catch (error) {
+      console.error('解析HTML目录内容失败:', error);
+      return [];
     }
   }
 
